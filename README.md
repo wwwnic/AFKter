@@ -197,3 +197,10 @@ camelCase locals/parameters/private fields, and `Async` suffixes on production a
 methods. Test methods use descriptive behavior names without an `Async` suffix.
 Keep discovery, LCU communication and UI separate. `.editorconfig` records
 indentation; no additional formatter or linter is required.
+
+## Agent diagnostics
+
+The tray app starts a read-only, token-authenticated loopback service automatically.
+See [the V1 discovery and query contract](docs/agent-diagnostics.md) for agent examples,
+bounds, test coverage, and native checks. Framework-dependent Windows installs now
+require ASP.NET Core 10 Runtime alongside .NET 10 Desktop Runtime.

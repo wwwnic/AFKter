@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../AFKtor.Core/AFKtor.Core.csproj" />
+    <ProjectReference Include="../AFKtor.Diagnostics/AFKtor.Diagnostics.csproj" />
   </ItemGroup>
 </Project>

@@ -1,9 +1,12 @@
 using AFKtor.Core;
+using AFKtor.Diagnostics;
 
 namespace AFKtor.Tray;
 
 internal sealed class TrayApplicationContext : ApplicationContext
 {
+    private readonly DiagnosticRuntime diagnostics = DiagnosticRuntime.Start(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "diagnostics", "discovery"));
     private readonly CancellationTokenSource stopping = new();
     private readonly HttpClient client;
     private readonly ReadyCheckController controller = new();
@@ -35,7 +38,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }) { Timeout = TimeSpan.FromSeconds(3) };
         monitor = new ReadyCheckSessionMonitor(async token =>
             LcuConnection.Parse(await LeagueClientDiscovery.ReadLockfileAsync(token)),
-            connection => new LcuReadyCheckClient(connection, client), controller);
+            connection => new LcuReadyCheckClient(connection, client), controller, diagnostics.Collector);
         arm.CheckedChanged += (_, _) =>
         {
             controller.SetArmed(arm.Checked);
@@ -133,6 +136,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             // Core teardown never captures the UI context, including on OS exit.
             monitor.DisposeAsync().AsTask().GetAwaiter().GetResult();
             controller.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            diagnostics.DisposeAsync().AsTask().GetAwaiter().GetResult();
             icon.Dispose();
             menu.Dispose();
             client.Dispose();

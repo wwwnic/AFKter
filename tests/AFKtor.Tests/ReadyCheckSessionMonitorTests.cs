@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using AFKtor.Core;
+using AFKtor.Core.Diagnostics;
 using NUnit.Framework;
 
 namespace AFKtor.Tests;
@@ -86,6 +87,28 @@ public sealed class ReadyCheckSessionMonitorTests
         release.SetResult();
         await refreshing.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.That(context.Posts, Is.Zero, "Synchronous UI disposal must not wait for a queued UI continuation.");
+    }
+
+    [Test]
+    public async Task DiagnosticsCaptureSessionTransitionsWithoutCredentialsOrExceptionText()
+    {
+        await using var diagnostics = new DiagnosticCollector();
+        await using var controller = new ReadyCheckController();
+        var api = new SessionClient();
+        await using var monitor = new ReadyCheckSessionMonitor(
+            _ => Task.FromResult(LcuConnection.Parse("LeagueClient:1:1001:SECRET_PASSWORD_MARKER:https")),
+            _ => api, controller, diagnostics);
+        await monitor.RefreshAsync();
+        await api.Started.Task;
+        Assert.That(diagnostics.GetState().Connection.Stage, Is.EqualTo(ConnectionStage.Connected));
+        api.Failure.SetException(new IOException("SECRET_EXCEPTION_MARKER"));
+        await monitor.SessionCompletion.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.That(diagnostics.GetState().Connection.Stage, Is.EqualTo(ConnectionStage.Disconnected));
+        Assert.That(diagnostics.GetState().Connection.Reason, Is.EqualTo(DiagnosticReason.SessionFailure));
+        var page = diagnostics.GetEvents(diagnostics.RunId, 0, 100)!;
+        Assert.That(page.Events.Select(e => e.Details.Stage), Does.Contain(ConnectionStage.Connecting));
+        var json = System.Text.Json.JsonSerializer.Serialize(page);
+        Assert.That(json, Does.Not.Contain("SECRET_"));
     }
 
     private sealed class CountingContext : SynchronizationContext

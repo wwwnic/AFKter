@@ -1,4 +1,5 @@
 using System.Net.WebSockets;
+using AFKtor.Core.Diagnostics;
 
 namespace AFKtor.Core;
 
@@ -6,7 +7,8 @@ namespace AFKtor.Core;
 public sealed class ReadyCheckSessionMonitor(
     Func<CancellationToken, Task<LcuConnection?>> discover,
     Func<LcuConnection, IReadyCheckClient> createClient,
-    ReadyCheckController controller) : IAsyncDisposable
+    ReadyCheckController controller,
+    DiagnosticCollector? diagnostics = null) : IAsyncDisposable
 {
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly CancellationTokenSource stopping = new();
@@ -23,6 +25,7 @@ public sealed class ReadyCheckSessionMonitor(
         try
         {
             LcuConnection? connection;
+            var discoveryReason = DiagnosticReason.DiscoveryUnavailable;
             try
             {
                 // Discovery is supplied by the UI. Invoke it off that context so
@@ -32,6 +35,7 @@ public sealed class ReadyCheckSessionMonitor(
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             {
                 connection = null;
+                discoveryReason = DiagnosticReason.DiscoveryFailed;
             }
             if (connection is not null && active is not null && active.Connection.Matches(connection) && !active.Completion.IsCompleted)
             {
@@ -39,11 +43,16 @@ public sealed class ReadyCheckSessionMonitor(
             }
             await StopSessionAsync().ConfigureAwait(false);
             refresh.Token.ThrowIfCancellationRequested();
-            if (connection is null) { return; }
+            if (connection is null)
+            {
+                diagnostics?.ConnectionChanged(ConnectionStage.Disconnected, 0, discoveryReason);
+                return;
+            }
             var client = createClient(connection);
             var session = new Session(connection, client, controller.BeginSession(client),
                 CancellationTokenSource.CreateLinkedTokenSource(stopping.Token));
             active = session;
+            diagnostics?.ConnectionChanged(ConnectionStage.Connecting, session.Generation, DiagnosticReason.None);
             session.Completion = RunSessionAsync(session);
         }
         finally { refreshGate.Release(); }
@@ -59,6 +68,7 @@ public sealed class ReadyCheckSessionMonitor(
                 {
                     controller.Update(session.Generation, update);
                     connected = true;
+                    diagnostics?.ConnectionChanged(ConnectionStage.Connected, session.Generation, DiagnosticReason.None);
                 }
             }, session.Cancellation.Token).ConfigureAwait(false);
         }
@@ -72,6 +82,8 @@ public sealed class ReadyCheckSessionMonitor(
             if (ReferenceEquals(active, session))
             {
                 connected = false;
+                diagnostics?.ConnectionChanged(ConnectionStage.Disconnected, session.Generation,
+                    session.Cancellation.IsCancellationRequested ? DiagnosticReason.Stopped : DiagnosticReason.SessionFailure);
                 await controller.DisconnectAsync().ConfigureAwait(false);
             }
         }
@@ -88,6 +100,7 @@ public sealed class ReadyCheckSessionMonitor(
             await pending.ConfigureAwait(false);
             session.Cancellation.Dispose();
             active = null;
+            diagnostics?.ConnectionChanged(ConnectionStage.Disconnected, session.Generation, DiagnosticReason.Stopped);
         }
     }
 
