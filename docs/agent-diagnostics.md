@@ -237,7 +237,11 @@ memory prefix cannot hide newer evidence. Event pages add `gaps`, `storage`, and
 persisted sequence, **not** proof that every preceding record or the crash tail
 survived. Gaps use fixed categories: `expired`, `evicted`, `corruption`,
 `unpersisted`, `sequenceGap`, `producerDropped`, and `storageUnavailable`.
-Store-wide gap metadata is deliberately conservative and may affect unrelated
+Collector queue loss adds `unpersisted` even when the store itself is healthy.
+A disabled collector sink keeps current-run persistence unavailable for the rest
+of that run; independently recovered storage reads do not resume writes. Known
+gaps in the bounded disk/memory union are reported on every page, including an
+empty tail and an intact early page. Store-wide gap metadata is deliberately conservative and may affect unrelated
 retained runs; exact unknown loss positions are never invented. Global producer
 loss has no assigned sequence. Storage loss is counted separately in
 `health.persistence.dropped` and collector queue loss in `health.sinkDropped`.

@@ -347,6 +347,87 @@ public sealed class DiagnosticHistoryTests
         Assert.That(seen, Is.EqualTo(Enumerable.Range(1, 1100).Select(i => (long)i)));
     }
 
+    [Test]
+    public async Task DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage()
+    {
+        using var directory = new Temp(); var clock = new Clock(DateTimeOffset.UtcNow);
+        await using var store = new DiagnosticHistoryStore(directory.Path, clock);
+        var sink = new DeferredSink(store);
+        await using var collector = new DiagnosticCollector(sink);
+        try
+        {
+            await sink.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            for (var i = 1; i < 100; i++) collector.ConnectionChanged(ConnectionStage.Connected, i, DiagnosticReason.None);
+            foreach (var record in collector.GetMemoryHistory().Events) await store.WriteAsync(record, default);
+            await WaitUntil(() => collector.GetState().Health.FailureCategory == "sinkUnavailable");
+            sink.Release.TrySetResult();
+            await sink.Finished.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            var history = new RetainedDiagnosticHistory(collector, store, clock);
+            var beforeEviction = history.GetEvents(collector.RunId, 100, 50)!;
+            var runBeforeEviction = history.GetRuns().Single(r => r.IsCurrent);
+
+            for (var i = 100; i < 2023; i++) collector.ConnectionChanged(ConnectionStage.Connected, i, DiagnosticReason.None);
+            Assert.That(store.GetEvents(collector.RunId, 0, 100)!.Events.Select(e => e.Sequence), Is.EqualTo(Enumerable.Range(1, 100).Select(i => (long)i)));
+            Assert.That(store.Status.Availability, Is.EqualTo("available"), "The store can recover independently of the permanently disabled collector sink.");
+            Assert.That(store.Status.Gaps, Is.Empty);
+            Assert.That(collector.GetMemoryHistory().FirstAvailableSequence, Is.EqualTo(1000));
+
+            await using var host = await DiagnosticHost.StartAsync(collector, directory.Path, history);
+            var descriptor = JsonSerializer.Deserialize<DiscoveryDescriptor>(await File.ReadAllTextAsync(host.DiscoveryPath!), DiagnosticJson.Options)!;
+            using var http = new HttpClient { BaseAddress = new Uri(host.Endpoint!) };
+            http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", descriptor.Token);
+            var tail = JsonSerializer.Deserialize<DiagnosticEventPage>(await http.GetStringAsync("/diagnostics/events?afterSequence=2023"), DiagnosticJson.Options)!;
+            var early = JsonSerializer.Deserialize<DiagnosticEventPage>(await http.GetStringAsync("/diagnostics/events?limit=50"), DiagnosticJson.Options)!;
+            var state = JsonSerializer.Deserialize<DiagnosticState>(await http.GetStringAsync("/diagnostics/state"), DiagnosticJson.Options)!;
+            using var runs = JsonDocument.Parse(await http.GetStringAsync("/diagnostics/runs"));
+            var currentRun = runs.RootElement.GetProperty("runs").EnumerateArray().Single(r => r.GetProperty("isCurrent").GetBoolean());
+            Assert.Multiple(() =>
+            {
+                Assert.That(beforeEviction.Storage, Is.EqualTo("unavailable"));
+                Assert.That(beforeEviction.Gaps, Does.Contain("unpersisted"));
+                Assert.That(beforeEviction.Completeness, Is.EqualTo("incomplete"));
+                Assert.That(runBeforeEviction.Persistence, Is.EqualTo("unavailable"));
+                Assert.That(tail.Events, Is.Empty);
+                Assert.That(tail.NextCursor, Is.EqualTo(2023));
+                Assert.That(tail.HasMore, Is.False);
+                Assert.That(early.Events.Select(e => e.Sequence), Is.EqualTo(Enumerable.Range(1, 50).Select(i => (long)i)));
+                Assert.That(early.HasMore, Is.True);
+                foreach (var page in new[] { tail, early })
+                {
+                    Assert.That(page.Storage, Is.EqualTo("unavailable"));
+                    Assert.That(page.Gaps, Does.Contain("unpersisted"));
+                    Assert.That(page.Gaps, Does.Contain("sequenceGap"), "Known holes in the retained union must not depend on the requested page.");
+                    Assert.That(page.Completeness, Is.EqualTo("incomplete"));
+                    Assert.That(page.HistoryEvicted, Is.True);
+                    Assert.That(page.FirstAvailableSequence, Is.EqualTo(1));
+                    Assert.That(page.LastAvailableSequence, Is.EqualTo(2023));
+                    Assert.That(page.PersistedThroughSequence, Is.EqualTo(100));
+                    Assert.That(page.SequenceWatermark, Is.EqualTo(2023));
+                    Assert.That(page.DroppedEvents, Is.Zero, "Sink loss does not fabricate producer drops or their sequence positions.");
+                }
+                Assert.That(state.Health.Storage, Is.EqualTo("unavailable"));
+                Assert.That(state.Health.Persistence!.Availability, Is.EqualTo("unavailable"));
+                Assert.That(state.Health.SinkDropped, Is.GreaterThan(0));
+                Assert.That(currentRun.GetProperty("persistence").GetString(), Is.EqualTo("unavailable"));
+            });
+        }
+        finally { sink.Release.TrySetResult(); }
+    }
+
+    private sealed class DeferredSink(DiagnosticHistoryStore store) : IDiagnosticSink
+    {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Finished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async ValueTask WriteAsync(DiagnosticEvent record, CancellationToken cancellationToken)
+        {
+            Entered.TrySetResult();
+            await Release.Task; // Deliberately outlives the collector deadline, then allows the store to recover.
+            await store.WriteAsync(record, CancellationToken.None);
+            Finished.TrySetResult();
+        }
+    }
+
     private static async Task WaitUntil(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(2);

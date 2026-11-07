@@ -87,3 +87,20 @@ Reviewed all new storage/recovery/retention/merger files and the changed Core/ho
 `3c57afd` — Retain bounded diagnostic history across restarts — scoped ticket02 source/tests/docs/ticket comment and durable execution report/evidence. Base d0e448a. No push performed by this agent.
 
 This report is saved in a following documentation-only commit, so it can name the implementation commit without a self-referential hash. Resolve its own commit with `git log -1 --format=%H -- .superpowers/sdd/agent-diagnostics/task-2-report.md`.
+
+
+## Review fix round 1 — disabled sink and page-independent gaps
+
+The fresh review (`task-2-review.md`) found one Important correctness issue: a collector-disabled sink could be concealed after the underlying store became healthy, and a missing interval between retained disk and memory could disappear from an empty tail or an intact early page. Reproduced before the fix in `DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage`: an actual sink call outlives 500ms, disk independently retains 1–100, and memory then rolls to 1000–2023. The test checks availability before memory eviction, then authenticated early/tail pages, run metadata, state and its persistence health; producer drops remain zero and no sequence positions are fabricated for sink loss.
+
+Added fixed-cost public collector getters `bool SinkDisabled` (durable for the run) and `long SinkDropped`; no wire schema or producer behavior changed. The merger includes queue loss as `unpersisted` and keeps current-run persistence unavailable with `sinkUnavailable` after sink disablement, even if indexed reads recover. An internal store snapshot reuses its already bounded ordered array; a linear merge checks at most 32,768 disk + 1,024 memory records for union discontinuities independently of the requested page, without extra I/O or gap-check allocation. Prior-run reads and separate producer/store/queue loss counters retain their existing semantics. Updated the diagnostic contract documentation accordingly.
+
+Commands use the same DOTNET_CLI_HOME/NUGET_PACKAGES/MSBuild environment documented above:
+
+- RED: `dotnet test tests/AFKtor.Tests/AFKtor.Tests.csproj -p:EnableWindowsTargeting=true --filter FullyQualifiedName~DisabledSinkCannot` — 1 failed, with the expected availability/completeness/gap assertions (`task-2-fix1-red.log`).
+- Focused GREEN: `dotnet test tests/AFKtor.Tests/AFKtor.Tests.csproj -p:EnableWindowsTargeting=true --filter FullyQualifiedName~DiagnosticHistoryTests` — 20 passed, 0 failed, 0 skipped (`task-2-fix1-focused.log`).
+- Full suite: `dotnet test AFKtor.slnx -p:EnableWindowsTargeting=true` — 127 passed, 0 failed, 0 skipped (`task-2-fix1-full.log`).
+- Windows Release: `dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true` — succeeded, 0 warnings, 0 errors (33.03s) (`task-2-fix1-build.log`).
+- `git diff --check` — clean.
+
+Scope: this finding only; no tickets 03/04, unrelated test slices, push, merge or branch switch. Scoped rereview and the previously documented native Windows checks remain pending. The fix commit is the commit containing this appended report section and the tracked fix1 evidence; resolve it with `git log -1 --format=%H -- .superpowers/sdd/agent-diagnostics/task-2-report.md`.

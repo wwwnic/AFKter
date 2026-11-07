@@ -1,0 +1,176 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  AFKtor.Core -> /workspace/AFKter/src/AFKtor.Core/bin/Debug/net10.0/AFKtor.Core.dll
+  AFKtor.Diagnostics -> /workspace/AFKter/src/AFKtor.Diagnostics/bin/Debug/net10.0/AFKtor.Diagnostics.dll
+  AFKtor.Tests -> /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll
+Test run for /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage [1 s]
+  Error Message:
+   Multiple failures or warnings in test:
+  1)   Assert.That(beforeEviction.Storage, Is.EqualTo("unavailable"))
+  Expected string length 11 but was 9. Strings differ at index 0.
+  Expected: "unavailable"
+  But was:  "available"
+  -----------^
+
+  2)   Assert.That(beforeEviction.Gaps, Does.Contain("unpersisted"))
+  Expected: some item equal to "unpersisted"
+  But was:  <empty>
+
+  3)   Assert.That(beforeEviction.Completeness, Is.EqualTo("incomplete"))
+  Expected string length 10 but was 23. Strings differ at index 0.
+  Expected: "incomplete"
+  But was:  "currentRunMemoryAndDisk"
+  -----------^
+
+  4)   Assert.That(runBeforeEviction.Persistence, Is.EqualTo("unavailable"))
+  Expected string length 11 but was 9. Strings differ at index 0.
+  Expected: "unavailable"
+  But was:  "available"
+  -----------^
+
+  5)   Assert.That(page.Storage, Is.EqualTo("unavailable"))
+  Expected string length 11 but was 9. Strings differ at index 0.
+  Expected: "unavailable"
+  But was:  "available"
+  -----------^
+
+  6)   Assert.That(page.Gaps, Does.Contain("unpersisted"))
+  Expected: some item equal to "unpersisted"
+  But was:  <empty>
+
+  7)   Known holes in the retained union must not depend on the requested page.
+Assert.That(page.Gaps, Does.Contain("sequenceGap"))
+  Expected: some item equal to "sequenceGap"
+  But was:  <empty>
+
+  8)   Assert.That(page.Completeness, Is.EqualTo("incomplete"))
+  Expected string length 10 but was 23. Strings differ at index 0.
+  Expected: "incomplete"
+  But was:  "currentRunMemoryAndDisk"
+  -----------^
+
+  9)   Assert.That(page.HistoryEvicted, Is.True)
+  Expected: True
+  But was:  False
+
+  10)   Assert.That(page.Storage, Is.EqualTo("unavailable"))
+  Expected string length 11 but was 9. Strings differ at index 0.
+  Expected: "unavailable"
+  But was:  "available"
+  -----------^
+
+  11)   Assert.That(page.Gaps, Does.Contain("unpersisted"))
+  Expected: some item equal to "unpersisted"
+  But was:  <empty>
+
+  12)   Known holes in the retained union must not depend on the requested page.
+Assert.That(page.Gaps, Does.Contain("sequenceGap"))
+  Expected: some item equal to "sequenceGap"
+  But was:  <empty>
+
+  13)   Assert.That(page.Completeness, Is.EqualTo("incomplete"))
+  Expected string length 10 but was 23. Strings differ at index 0.
+  Expected: "incomplete"
+  But was:  "currentRunMemoryAndDisk"
+  -----------^
+
+  14)   Assert.That(page.HistoryEvicted, Is.True)
+  Expected: True
+  But was:  False
+
+  15)   Assert.That(state.Health.Persistence!.Availability, Is.EqualTo("unavailable"))
+  Expected string length 11 but was 9. Strings differ at index 0.
+  Expected: "unavailable"
+  But was:  "available"
+  -----------^
+
+  16)   Assert.That(currentRun.GetProperty("persistence").GetString(), Is.EqualTo("unavailable"))
+  Expected string length 11 but was 9. Strings differ at index 0.
+  Expected: "unavailable"
+  But was:  "available"
+  -----------^
+
+
+  Stack Trace:
+     at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 414
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 414
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.BlockUntilCompleted()
+   at NUnit.Framework.Internal.MessagePumpStrategy.NoMessagePumpStrategy.WaitForCompletion(AwaitAdapter awaiter)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+
+1)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 386
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+2)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 387
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+3)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 388
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+4)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 389
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+5)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 397
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+6)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 398
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+7)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 399
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+8)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 400
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+9)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 401
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+10)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 397
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+11)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 398
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+12)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 399
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+13)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 400
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+14)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 401
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+15)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 409
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+16)    at AFKtor.Tests.DiagnosticHistoryTests.<>c__DisplayClass19_1.<DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage>b__5() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 411
+   at NUnit.Framework.Assert.Multiple(TestDelegate testDelegate)
+   at AFKtor.Tests.DiagnosticHistoryTests.DisabledSinkCannotClaimRecoveredPersistenceOrHideUnionGapOnAnyPage() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 384
+
+
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 1 s - AFKtor.Tests.dll (net10.0)

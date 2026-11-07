@@ -103,13 +103,17 @@ public sealed partial class DiagnosticHistoryStore : IDiagnosticSink, IDiagnosti
     }
 
     public DiagnosticEventPage? GetEvents(Guid runId, long afterSequence, int limit) => GetEvents(runId, afterSequence, limit, CancellationToken.None);
-    public DiagnosticEventPage? GetEvents(Guid runId, long afterSequence, int limit, CancellationToken cancellationToken)
+    public DiagnosticEventPage? GetEvents(Guid runId, long afterSequence, int limit, CancellationToken cancellationToken) =>
+        GetEventSnapshot(runId, afterSequence, limit, cancellationToken).Page;
+
+    // Reuse the already bounded, ordered read snapshot for whole-union gap checks, without extra I/O.
+    internal (DiagnosticEventPage? Page, DiagnosticEvent[] Available) GetEventSnapshot(Guid runId, long afterSequence, int limit, CancellationToken cancellationToken)
     {
         if (afterSequence < 0 || limit is < 1 or > DiagnosticLimits.PageEvents) throw new ArgumentOutOfRangeException(nameof(limit));
         gate.Wait(cancellationToken);
         try
         {
-            if (!PrepareRead(cancellationToken) || !runs.TryGetValue(runId, out var run)) return null;
+            if (!PrepareRead(cancellationToken) || !runs.TryGetValue(runId, out var run)) return (null, []);
             var all = segments.SelectMany(s => s.Events).Where(e => e.RunId == runId && e.Timestamp >= clock.GetUtcNow() - DiagnosticHistoryLimits.Lifetime)
                 .DistinctBy(e => e.Sequence).OrderBy(e => e.Sequence).ToArray();
             var records = all.Where(e => e.Sequence > afterSequence).Take(limit).ToArray();
@@ -118,10 +122,10 @@ public sealed partial class DiagnosticHistoryStore : IDiagnosticSink, IDiagnosti
             var first = all.FirstOrDefault()?.Sequence;
             if (run.Watermark > (all.LastOrDefault()?.Sequence ?? 0) || first > 1 || all.Zip(all.Skip(1), (a, b) => b.Sequence != a.Sequence + 1).Any(x => x))
                 reasons = reasons.Append("sequenceGap").Distinct().ToArray();
-            return new(1, runId, records, cursor, first, all.LastOrDefault()?.Sequence, run.Watermark,
+            return (new DiagnosticEventPage(1, runId, records, cursor, first, all.LastOrDefault()?.Sequence, run.Watermark,
                 all.Any(e => e.Sequence > cursor), reasons.Contains("expired") || reasons.Contains("evicted"), run.Dropped,
                 records.Any(e => e.Truncated), reasons.Length > 0 ? "incomplete" : "persistedPrefixOnly", reasons,
-                Status.Availability, all.LastOrDefault()?.Sequence);
+                Status.Availability, all.LastOrDefault()?.Sequence), all);
         }
         finally { gate.Release(); }
     }

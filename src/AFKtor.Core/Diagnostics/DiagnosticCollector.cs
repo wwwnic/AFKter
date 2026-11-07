@@ -14,12 +14,14 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
     private readonly CancellationTokenSource stopping = new();
     private readonly Task sinkWorker;
     private long sequence, producerDropped, sinkDropped, evicted;
-    private int queueDepth, stopped;
+    private int queueDepth, stopped, sinkDisabled;
     private string api = "starting", discovery = "starting", storage = "unavailable";
     private string? failure;
     private DiagnosticPersistenceStatus? persistence;
     private ConnectionDiagnosticState connection = new(ConnectionStage.Unknown, 0, DiagnosticReason.None, null, null);
     public Guid RunId { get; } = Guid.NewGuid();
+    public bool SinkDisabled => Volatile.Read(ref sinkDisabled) != 0;
+    public long SinkDropped => Interlocked.Read(ref sinkDropped);
     public DateTimeOffset StartedAt { get; } = DateTimeOffset.UtcNow;
     public string Build { get; } = ReadBuild();
 
@@ -147,6 +149,7 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
                 }
                 catch (Exception)
                 {
+                    Volatile.Write(ref sinkDisabled, 1);
                     Interlocked.Increment(ref sinkDropped);
                     Volatile.Write(ref storage, "unavailable");
                     Volatile.Write(ref failure, "sinkUnavailable");
