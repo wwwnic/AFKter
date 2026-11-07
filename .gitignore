@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+TestResults/
+.scratch/**/validation/
+.scratch/dotnet-home/

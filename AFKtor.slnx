@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AFKtor.Core/AFKtor.Core.csproj" />
+    <Project Path="src/AFKtor.Tray/AFKtor.Tray.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AFKtor.Tests/AFKtor.Tests.csproj" />
+  </Folder>
+</Solution>
