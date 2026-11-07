@@ -6,7 +6,8 @@ namespace AFKtor.Tray;
 internal sealed class TrayApplicationContext : ApplicationContext
 {
     private readonly DiagnosticRuntime diagnostics = DiagnosticRuntime.Start(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "diagnostics", "discovery"));
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "diagnostics", "discovery"), historyDirectory: Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "diagnostics", "history"));
     private readonly CancellationTokenSource stopping = new();
     private readonly HttpClient client;
     private readonly ReadyCheckController controller = new();

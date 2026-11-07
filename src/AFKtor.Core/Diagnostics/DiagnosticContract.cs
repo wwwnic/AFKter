@@ -28,7 +28,8 @@ public sealed record ConnectionDiagnosticState(ConnectionStage Stage, long Gener
     DateTimeOffset? ObservedAt, DateTimeOffset? LastSuccessfulObservation);
 public sealed record UnavailableDiagnosticState(string Availability = "unavailable");
 public sealed record DiagnosticHealth(string Api, string Discovery, string Storage, int QueueDepth,
-    long ProducerDropped, long SinkDropped, long Evicted, long Truncated, string? FailureCategory);
+    long ProducerDropped, long SinkDropped, long Evicted, long Truncated, string? FailureCategory,
+    DiagnosticPersistenceStatus? Persistence = null);
 public sealed record DiagnosticState(int SchemaVersion, Guid RunId, string Build, DateTimeOffset StartedAt,
     DateTimeOffset SnapshotAt, long SequenceWatermark, ConnectionDiagnosticState Connection,
     UnavailableDiagnosticState ReadyCheck, UnavailableDiagnosticState Arming,
@@ -37,7 +38,8 @@ public sealed record DiagnosticRun(int SchemaVersion, Guid RunId, string Build, 
     bool IsCurrent, string Persistence);
 public sealed record DiagnosticEventPage(int SchemaVersion, Guid RunId, DiagnosticEvent[] Events,
     long NextCursor, long? FirstAvailableSequence, long? LastAvailableSequence, long SequenceWatermark,
-    bool HasMore, bool HistoryEvicted, long DroppedEvents, bool Truncated, string Completeness);
+    bool HasMore, bool HistoryEvicted, long DroppedEvents, bool Truncated, string Completeness,
+    string[]? Gaps = null, string Storage = "unavailable", long? PersistedThroughSequence = null);
 
 /// <summary>Background-only extension seam. Implementations must honor cancellation; a hung sink is abandoned.</summary>
 public interface IDiagnosticSink
@@ -49,5 +51,16 @@ public interface IDiagnosticSink
 public interface IDiagnosticHistory
 {
     DiagnosticRun[] GetRuns();
+    DiagnosticRun[] GetRuns(CancellationToken cancellationToken) { cancellationToken.ThrowIfCancellationRequested(); return GetRuns(); }
     DiagnosticEventPage? GetEvents(Guid runId, long afterSequence, int limit);
+    DiagnosticEventPage? GetEvents(Guid runId, long afterSequence, int limit, CancellationToken cancellationToken)
+    { cancellationToken.ThrowIfCancellationRequested(); return GetEvents(runId, afterSequence, limit); }
+}
+
+/// <summary>Immutable fixed-category health; implementations must return immediately.</summary>
+public sealed record DiagnosticPersistenceStatus(string Availability, string? FailureCategory, long Dropped,
+    long Truncated, long DeletedSegments, string[] Gaps);
+public interface IDiagnosticSinkHealth
+{
+    DiagnosticPersistenceStatus Status { get; }
 }

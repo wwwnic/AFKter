@@ -17,6 +17,7 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
     private int queueDepth, stopped;
     private string api = "starting", discovery = "starting", storage = "unavailable";
     private string? failure;
+    private DiagnosticPersistenceStatus? persistence;
     private ConnectionDiagnosticState connection = new(ConnectionStage.Unknown, 0, DiagnosticReason.None, null, null);
     public Guid RunId { get; } = Guid.NewGuid();
     public DateTimeOffset StartedAt { get; } = DateTimeOffset.UtcNow;
@@ -83,7 +84,7 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
     {
         lock (gate) return new(1, RunId, Build, StartedAt, DateTimeOffset.UtcNow, sequence, connection, new(), new(), new(), new(),
             new(Volatile.Read(ref api), Volatile.Read(ref discovery), Volatile.Read(ref storage), Volatile.Read(ref queueDepth),
-                Interlocked.Read(ref producerDropped), Interlocked.Read(ref sinkDropped), evicted, 0, Volatile.Read(ref failure)));
+                Interlocked.Read(ref producerDropped), Interlocked.Read(ref sinkDropped), evicted, Volatile.Read(ref persistence)?.Truncated ?? 0, Volatile.Read(ref failure), Volatile.Read(ref persistence)));
     }
 
     public DiagnosticRun[] GetRuns() => [new(1, RunId, Build, StartedAt, true, "memoryOnly")];
@@ -91,16 +92,24 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
     {
         if (runId != RunId) return null;
         if (afterSequence < 0 || limit < 1 || limit > DiagnosticLimits.PageEvents) throw new ArgumentOutOfRangeException(nameof(limit));
-        lock (gate)
-        {
-            var records = events.Where(e => e.Sequence > afterSequence).Take(limit).ToArray();
-            var first = events.Count == 0 ? (long?)null : events.Peek().Sequence;
-            var cursor = records.Length == 0 ? afterSequence : records[^1].Sequence;
-            var lost = Interlocked.Read(ref producerDropped);
-            var gap = first is { } start && afterSequence < start - 1;
-            return new(1, RunId, records, cursor, first, events.Count == 0 ? null : sequence, sequence,
-                sequence > cursor, gap, lost, false, gap || lost > 0 ? "incomplete" : "currentRunMemoryOnly");
-        }
+        lock (gate) return ReadEvents(afterSequence, limit);
+    }
+
+    /// <summary>A coherent bounded copy of the entire memory ring for retention-aware merging.</summary>
+    public DiagnosticEventPage GetMemoryHistory()
+    {
+        lock (gate) return ReadEvents(0, DiagnosticLimits.MemoryEvents);
+    }
+
+    private DiagnosticEventPage ReadEvents(long afterSequence, int limit)
+    {
+        var records = events.Where(e => e.Sequence > afterSequence).Take(limit).ToArray();
+        var first = events.Count == 0 ? (long?)null : events.Peek().Sequence;
+        var cursor = records.Length == 0 ? afterSequence : records[^1].Sequence;
+        var lost = Interlocked.Read(ref producerDropped);
+        var gap = first is { } start && afterSequence < start - 1;
+        return new(1, RunId, records, cursor, first, events.Count == 0 ? null : sequence, sequence,
+            sequence > cursor, gap, lost, false, gap || lost > 0 ? "incomplete" : "currentRunMemoryOnly");
     }
 
     // These health setters accept only a boolean and fixed categories, never raw exception metadata.
@@ -117,9 +126,24 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
                 try
                 {
                     // Isolate even a synchronously blocking implementation from producer and shutdown threads.
-                    await Task.Run(async () => await sink.WriteAsync(record, stopping.Token).ConfigureAwait(false))
-                        .WaitAsync(TimeSpan.FromMilliseconds(DiagnosticLimits.SinkMilliseconds), stopping.Token).ConfigureAwait(false);
-                    Volatile.Write(ref storage, "available");
+                    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(stopping.Token);
+                    deadline.CancelAfter(TimeSpan.FromMilliseconds(DiagnosticLimits.SinkMilliseconds));
+                    var health = await Task.Run(async () =>
+                    {
+                        await sink.WriteAsync(record, deadline.Token).ConfigureAwait(false);
+                        return (sink as IDiagnosticSinkHealth)?.Status;
+                    }).WaitAsync(TimeSpan.FromMilliseconds(DiagnosticLimits.SinkMilliseconds), stopping.Token).ConfigureAwait(false);
+                    if (health is null) Volatile.Write(ref storage, "available");
+                    else
+                    {
+                        // Only fixed safe categories may cross from an injected background sink.
+                        var availability = health.Availability is "available" or "starting" ? health.Availability : "unavailable";
+                        var category = health.FailureCategory is "ownershipUnavailable" or "storageUnavailable" ? health.FailureCategory : null;
+                        var gaps = (health.Gaps ?? []).Take(8).Where(g => g is "expired" or "evicted" or "corruption" or "unpersisted" or "sequenceGap").Distinct().Take(5).ToArray();
+                        Volatile.Write(ref persistence, health with { Availability = availability, FailureCategory = category, Gaps = gaps });
+                        Volatile.Write(ref storage, availability);
+                        Volatile.Write(ref failure, category);
+                    }
                 }
                 catch (Exception)
                 {

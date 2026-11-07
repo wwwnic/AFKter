@@ -14,7 +14,7 @@ continues to reference only the base .NET runtime.
 
 A cloud/Linux agent cannot automatically reach a live Windows localhost
 listener. This feature does not create a tunnel or upload evidence. Run queries
-on the Windows machine; sharing retained files is a later workflow.
+on the Windows machine; provide retained files through an existing file-access workflow when offline.
 
 ## Discovery and queries
 
@@ -89,8 +89,9 @@ unavailable groups are reserved for subsequent source instrumentation.
 
 `GET /diagnostics/runs` returns `{ "schemaVersion": 1, "runs": [...] }`.
 Each entry has `schemaVersion`, `runId`, `build`, `startedAt`, `isCurrent`, and
-`persistence`. This slice reports only the current run with `memoryOnly`; it
-makes no persistence or crash-completeness promise.
+`persistence`. The current run reports storage availability; prior runs report
+`persistedPrefixOnly`. Retained tombstones can identify runs whose events were
+evicted. Only `/state` describes the current live run.
 
 `GET /diagnostics/events?runId=<guid>&afterSequence=0&limit=50` defaults to the
 current run, cursor zero, and limit 50. It returns:
@@ -116,15 +117,15 @@ current run, cursor zero, and limit 50. It returns:
 
 Sequences strictly increase within a run for captured events. Wall-clock ties
 or corrections never determine order. Feed `nextCursor` back as
-`afterSequence`. Bounds describe retained memory at query time. An empty tail
+`afterSequence`. Bounds describe the union of retained memory and disk at query time. An empty tail
 has no events and `hasMore: false`; `historyEvicted: true` means the requested
 cursor precedes the retained prefix. `droppedEvents` counts producer attempts
 lost before a sequence could be assigned; their precise sequence positions are
 unknown. Any such loss conservatively makes all pages `incomplete`, even when
 the requested tail is empty. Sink losses affect persistence health, not the
 available in-memory sequence. Pagination itself is indicated by `hasMore`;
-`truncated` means detail/response truncation, never silent omission. Current
-typed details fit the fixed event budget, so truncation is false in this slice.
+`truncated` means detail/response truncation, never silent omission. Oversized safe records are explicitly marked `truncated`; page truncation is
+true if a returned event was truncated.
 
 Stable event codes: `app.started`, `app.stopped`, `connection.changed`.
 Connection stages: `unknown`, `disconnected`, `discovering`, `connecting`,
@@ -138,7 +139,8 @@ slice; source-specific safe details follow in later tickets.
 Errors contain only `{ "schemaVersion": 1, "error": "<fixedCode>" }`:
 401 `unauthorized`; 405 `methodNotAllowed`; 409 `runMismatch`;
 400 `invalidQuery` or `invalidRouteOrQuery`; 404 `runUnavailable` or
-`invalidRouteOrQuery`; 429 `busy`; 503 `unavailable` or `responseTooLarge`.
+`invalidRouteOrQuery`; 429 `busy`; 503 `unavailable`, `storageUnavailable`, or `responseTooLarge`. An unknown run
+returns `storageUnavailable` when storage cannot establish whether it exists.
 Unknown query keys, duplicate values, malformed/negative cursors, invalid GUIDs,
 and limits outside 1–100 are rejected. A request exceeding its deadline is
 aborted. All responses disable caching. No credential/request/exception text is
@@ -159,7 +161,7 @@ returning a misleading partial page.
 | HTTP requests | 8 executing readers; excess requests get 429; a hung reader retains its slot |
 | Transport | 32 connections, 8,192 header bytes, 2,048 request-line bytes, zero request body bytes |
 | Deadlines | 2 seconds for startup, request handling, headers, and keepalive |
-| Shutdown | Shared 2 seconds across collector and host, then abandon remaining diagnostic work |
+| Shutdown | Shared 2 seconds across collector, storage and host, then abandon remaining diagnostic work |
 | Error metadata | Fixed codes, under 128 encoded bytes; no exception message/stack/path |
 
 Health uses fixed availability/category strings and independent counters, without
@@ -177,16 +179,99 @@ are the sealed producer interface. Extend the allowlisted observation/detail
 records and coherent projection for further evidence; preserve their finite
 encoded size and do not add caller-supplied formatting/callbacks.
 `IDiagnosticSink.WriteAsync` receives immutable records only on the bounded
-background worker. `IDiagnosticHistory.GetRuns/GetEvents` lets the next slice
-merge persisted and current events behind the same HTTP contract. It must enforce
-retention, bound results and explicitly account for storage gaps. The host
-isolates throwing/hung history readers. `DiagnosticRuntime` composes the default
-collector/host and accepts optional sink/history implementations. Storage is not
-implemented here; seven-day/20,000,000-byte retention belongs to ticket 02.
+background worker. `IDiagnosticHistory.GetRuns/GetEvents` has cancellation-aware overloads; the host
+passes its request deadline and isolates throwing/hung readers.
+`DiagnosticCollector.GetMemoryHistory()` returns one coherent copy of the entire
+1,024-event ring for retention-aware merging. `DiagnosticRuntime.Start` composes
+the collector, default store, merger and host; optional sink/history overrides
+remain available, with an optional `historyDirectory` for storage placement.
+The default injected-directory layout is `<discoveryDirectory>/history`; the
+Windows tray explicitly uses the separate standard history path below.
 
-`DiagnosticsTests`, `DiagnosticIsolationTests`, and the source-level session test
+`DiagnosticHistoryTests`, `DiagnosticsTests`, `DiagnosticIsolationTests`, and the source-level session test
 exercise real Linux HTTP, auth/discovery/mode checks, ordering/gaps, input/bounds,
 secret exclusion, source transitions, blocked readers/sinks, and lifecycle.
 Native Windows startup, inherited file ACL behavior, installed-runtime packaging,
 and live League transitions remain manual checks. An independent review is
 required before this ticket is considered integrated.
+
+
+## Retained history and offline recovery
+
+The tray stores JSON Lines under `%LOCALAPPDATA%/AFKtor/diagnostics/history`.
+Discovery and its token remain separate. The first queued record initializes
+storage on a background worker; constructing/starting the runtime performs no
+storage ownership, scan or cleanup on the tray thread. Each complete newline
+terminated event is flushed before being indexed as persisted. Only successfully
+persisted records are promised across process exit; hardware/filesystem failure
+can still lose evidence. The store never synthesizes `app.stopped` or a known
+acceptance outcome after a crash.
+
+| Storage resource | Bound/policy |
+| --- | --- |
+| Total history | 20,000,000 actual encoded bytes across all history files, including active segments, manifests, lock file and damaged leftovers |
+| Lifetime | Seven days from each event's UTC timestamp; no expired event is returned |
+| Segment | New segments rotate at 65,536 encoded bytes |
+| Index | 512 segments, 32,768 events; these additional limits can evict evidence before the byte limit |
+| Run metadata | 128 retained runs/tombstones, oldest removed first |
+| Manifest | 262,144 bytes each for metadata.json and metadata.tmp; cleanup reserves both replacement files before writes |
+| Directory scan | 1,024 entries; excess entries degrade persistence instead of allocating an unbounded index |
+| Cleanup | On initialization, before writes/history reads, and every minute while running |
+| Retry | One serialized storage attempt after 1, 2, 4, 8, 16, 32, then at most every 60 seconds; intervening writes are dropped/countable |
+
+The byte budget includes every regular file in the dedicated history directory.
+Do not place unrelated files there: unknown/damaged leftovers may be deleted to
+restore the budget. Space reserved for replacement metadata means usable event
+history can be smaller than 20 MB. Expired mixed-age segments are removed whole;
+newer records lost with them are reported as retention gaps. Offline aging is
+cleaned at the next initialization. A failed cleanup stops writes rather than
+allowing history to grow; age-filtered indexed records remain readable during
+backoff. Cleanup and synchronous filesystem operations run only on diagnostic
+workers. A filesystem operation that ignores cancellation can be abandoned at
+the shared shutdown deadline; its background task may finish later.
+
+Events are merged by `(runId, sequence)` with memory winning duplicate keys,
+then sorted by sequence. Expiry is applied before memory pagination, so an old
+memory prefix cannot hide newer evidence. Event pages add `gaps`, `storage`, and
+`persistedThroughSequence`. The last field is the greatest currently retained
+persisted sequence, **not** proof that every preceding record or the crash tail
+survived. Gaps use fixed categories: `expired`, `evicted`, `corruption`,
+`unpersisted`, `sequenceGap`, `producerDropped`, and `storageUnavailable`.
+Store-wide gap metadata is deliberately conservative and may affect unrelated
+retained runs; exact unknown loss positions are never invented. Global producer
+loss has no assigned sequence. Storage loss is counted separately in
+`health.persistence.dropped` and collector queue loss in `health.sinkDropped`.
+
+Prior-run pages are `persistedPrefixOnly`, or `incomplete` when established gaps
+exist. Current pages are `currentRunMemoryAndDisk`, or `incomplete`. A retained
+run with no remaining events can return an empty page with loss reasons; an
+unknown run returns 404 when storage is available and 503 `storageUnavailable`
+when storage cannot establish its existence. Run tombstones are bounded, so
+removed older identities cannot always be distinguished from never-seen runs.
+Health includes `persistence` with `availability`, `failureCategory`, `dropped`,
+`truncated`, `deletedSegments`, and `gaps`. Storage categories are
+`ownershipUnavailable` and `storageUnavailable`, without paths or exception text.
+The API state reads the current store health even when cleanup occurs while idle.
+
+One exclusive `owner.lock` file handle owns a history directory. A second
+instance retains live memory/API/discovery but degrades disk persistence until
+ownership can be retried. The OS releases ownership on process exit; the mere
+presence of the lock file does not block recovery. Discovery identities stay
+per instance. Normal shutdown drains queued records when possible, then closes
+storage under the same two-second diagnostic budget.
+
+For offline inspection, copy the history directory after stopping the app and
+read complete JSONL lines ordered by run ID and sequence, deduplicating keys.
+Treat malformed lines and incomplete final lines as lost evidence. For API
+inspection after restart, query `/diagnostics/runs`, then request the desired
+prior run explicitly. Keep the original damaged directory when troubleshooting;
+work on a copy if you need to preserve evidence before retention cleanup.
+For unavailable storage, check free space, directory write/delete permission,
+other live AFKtor instances and leftover file locks, then allow the bounded retry.
+Never infer a clean shutdown or an accepted match from a missing event.
+
+Native Windows checks remain: NTFS sharing/locking and crash release, deletion
+and replacement while files are open, inherited history-directory ACLs, denied
+access/full-volume behavior, and startup/shutdown on a slow filesystem. Linux
+permission tests and a Windows Release cross-build do not establish these native
+filesystem guarantees.

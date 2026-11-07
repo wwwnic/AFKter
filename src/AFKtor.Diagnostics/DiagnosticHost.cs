@@ -99,7 +99,8 @@ public sealed class DiagnosticHost : IAsyncDisposable
             // Copy bounded request metadata before handing work to an isolated reader.
             var path = context.Request.Path.Value;
             var query = context.Request.Query.ToDictionary(e => e.Key, e => e.Value.ToArray());
-            work = Task.Run(() => ReadResponse(path, query));
+            var requestCancellation = deadline.Token;
+            work = Task.Run(() => ReadResponse(path, query, requestCancellation));
             var result = await work.WaitAsync(deadline.Token).ConfigureAwait(false);
             context.Response.StatusCode = result.Status;
             context.Response.ContentType = "application/json";
@@ -121,11 +122,22 @@ public sealed class DiagnosticHost : IAsyncDisposable
         return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(value.AsSpan(7).ToString()), Encoding.ASCII.GetBytes(token));
     }
 
-    private (int, byte[]) ReadResponse(string? path, Dictionary<string, string?[]> query)
+    private (int, byte[]) ReadResponse(string? path, Dictionary<string, string?[]> query, CancellationToken cancellationToken)
     {
         object? response;
-        if (path == "/diagnostics/state" && query.Count == 0) response = collector.GetState();
-        else if (path == "/diagnostics/runs" && query.Count == 0) response = new { schemaVersion = 1, runs = history.GetRuns() };
+        if (path == "/diagnostics/state" && query.Count == 0)
+        {
+            var state = collector.GetState();
+            // The sealed merger exposes an immediate immutable health snapshot, including idle cleanup.
+            if (history is RetainedDiagnosticHistory retained)
+            {
+                var health = retained.Status;
+                state = state with { Health = state.Health with { Storage = state.Health.FailureCategory is "sinkUnavailable" or "shutdownTimeout" ? "unavailable" : health.Availability, Persistence = health,
+                    Truncated = health.Truncated, FailureCategory = health.FailureCategory ?? state.Health.FailureCategory } };
+            }
+            response = state;
+        }
+        else if (path == "/diagnostics/runs" && query.Count == 0) response = new { schemaVersion = 1, runs = history.GetRuns(cancellationToken) };
         else if (path == "/diagnostics/events")
         {
             if (query.Any(e => e.Value.Length != 1 || e.Key is not ("runId" or "afterSequence" or "limit"))) return Error(400, "invalidQuery");
@@ -136,8 +148,9 @@ public sealed class DiagnosticHost : IAsyncDisposable
                 query.TryGetValue("afterSequence", out var cursor) && !long.TryParse(cursor[0], NumberStyles.None, CultureInfo.InvariantCulture, out after) ||
                 query.TryGetValue("limit", out var count) && !int.TryParse(count[0], NumberStyles.None, CultureInfo.InvariantCulture, out limit) ||
                 after < 0 || limit < 1 || limit > DiagnosticLimits.PageEvents) return Error(400, "invalidQuery");
-            response = history.GetEvents(run, after, limit);
-            if (response is null) return Error(404, "runUnavailable");
+            response = history.GetEvents(run, after, limit, cancellationToken);
+            if (response is null) return history is IDiagnosticSinkHealth health && health.Status.Availability != "available"
+                ? Error(503, "storageUnavailable") : Error(404, "runUnavailable");
         }
         else return Error(path is "/diagnostics/state" or "/diagnostics/runs" ? 400 : 404, "invalidRouteOrQuery");
         try

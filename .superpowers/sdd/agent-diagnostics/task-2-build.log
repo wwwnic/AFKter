@@ -1,0 +1,12 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  AFKtor.Core -> /workspace/AFKter/src/AFKtor.Core/bin/Release/net10.0/AFKtor.Core.dll
+  AFKtor.Diagnostics -> /workspace/AFKter/src/AFKtor.Diagnostics/bin/Release/net10.0/AFKtor.Diagnostics.dll
+  AFKtor.Tray -> /workspace/AFKter/src/AFKtor.Tray/bin/Release/net10.0-windows/AFKtor.Tray.dll
+  AFKtor.Tests -> /workspace/AFKter/tests/AFKtor.Tests/bin/Release/net10.0/AFKtor.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:37.28

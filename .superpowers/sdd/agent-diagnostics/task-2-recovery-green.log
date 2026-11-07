@@ -1,0 +1,53 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  AFKtor.Core -> /workspace/AFKter/src/AFKtor.Core/bin/Debug/net10.0/AFKtor.Core.dll
+  AFKtor.Diagnostics -> /workspace/AFKter/src/AFKtor.Diagnostics/bin/Debug/net10.0/AFKtor.Diagnostics.dll
+  AFKtor.Tests -> /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll
+Test run for /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed OfflineExpiryIsCleanedAtStartupAndPeriodicCleanupRunsWithoutQueries [2 s]
+  Error Message:
+     Assert.That(condition(), Is.True)
+  Expected: True
+  But was:  False
+
+  Stack Trace:
+     at AFKtor.Tests.DiagnosticHistoryTests.WaitUntil(Func`1 condition) in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 299
+   at AFKtor.Tests.DiagnosticHistoryTests.OfflineExpiryIsCleanedAtStartupAndPeriodicCleanupRunsWithoutQueries() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 275
+   at AFKtor.Tests.DiagnosticHistoryTests.OfflineExpiryIsCleanedAtStartupAndPeriodicCleanupRunsWithoutQueries() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 276
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.BlockUntilCompleted()
+   at NUnit.Framework.Internal.MessagePumpStrategy.NoMessagePumpStrategy.WaitForCompletion(AwaitAdapter awaiter)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+
+1)    at AFKtor.Tests.DiagnosticHistoryTests.WaitUntil(Func`1 condition) in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 299
+
+
+  Failed UnwritableInitializationDoesNotBlockRuntimeOrLoseLiveEvidence [14 ms]
+  Error Message:
+     Assert.That(runtime.Collector.GetState().Health.Storage, Is.EqualTo("unavailable"))
+  Expected string length 11 but was 8. Strings differ at index 0.
+  Expected: "unavailable"
+  But was:  "starting"
+  -----------^
+
+  Stack Trace:
+     at AFKtor.Tests.DiagnosticHistoryTests.UnwritableInitializationDoesNotBlockRuntimeOrLoseLiveEvidence() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 187
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.BlockUntilCompleted()
+   at NUnit.Framework.Internal.MessagePumpStrategy.NoMessagePumpStrategy.WaitForCompletion(AwaitAdapter awaiter)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+
+1)    at AFKtor.Tests.DiagnosticHistoryTests.UnwritableInitializationDoesNotBlockRuntimeOrLoseLiveEvidence() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 187
+
+
+
+Failed!  - Failed:     2, Passed:    14, Skipped:     0, Total:    16, Duration: 3 s - AFKtor.Tests.dll (net10.0)

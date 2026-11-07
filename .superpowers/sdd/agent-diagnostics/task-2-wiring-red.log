@@ -1,0 +1,34 @@
+  Determining projects to restore...
+  Restored /workspace/AFKter/src/AFKtor.Diagnostics/AFKtor.Diagnostics.csproj (in 254 ms).
+  Restored /workspace/AFKter/tests/AFKtor.Tests/AFKtor.Tests.csproj (in 254 ms).
+  Restored /workspace/AFKter/src/AFKtor.Core/AFKtor.Core.csproj (in 3 ms).
+  AFKtor.Core -> /workspace/AFKter/src/AFKtor.Core/bin/Debug/net10.0/AFKtor.Core.dll
+  AFKtor.Diagnostics -> /workspace/AFKter/src/AFKtor.Diagnostics/bin/Debug/net10.0/AFKtor.Diagnostics.dll
+  AFKtor.Tests -> /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll
+Test run for /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed RuntimePersistsPriorRunAndAuthenticatedApiMergesCurrentHistory [245 ms]
+  Error Message:
+   System.Net.Http.HttpRequestException : Response status code does not indicate success: 404 (Not Found).
+  Stack Trace:
+     at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at AFKtor.Tests.DiagnosticHistoryTests.RuntimePersistsPriorRunAndAuthenticatedApiMergesCurrentHistory() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 138
+   at AFKtor.Tests.DiagnosticHistoryTests.RuntimePersistsPriorRunAndAuthenticatedApiMergesCurrentHistory() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 143
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.BlockUntilCompleted()
+   at NUnit.Framework.Internal.MessagePumpStrategy.NoMessagePumpStrategy.WaitForCompletion(AwaitAdapter awaiter)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+
+Failed!  - Failed:     1, Passed:    10, Skipped:     0, Total:    11, Duration: 605 ms - AFKtor.Tests.dll (net10.0)

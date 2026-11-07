@@ -1,0 +1,157 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  AFKtor.Core -> /workspace/AFKter/src/AFKtor.Core/bin/Debug/net10.0/AFKtor.Core.dll
+  AFKtor.Diagnostics -> /workspace/AFKter/src/AFKtor.Diagnostics/bin/Debug/net10.0/AFKtor.Diagnostics.dll
+  AFKtor.Tests -> /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll
+Test run for /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed ConcurrentOwnerDegradesAndReleasedOwnershipCanRecover [18 ms]
+  Error Message:
+   System.NotImplementedException : The method or operation is not implemented.
+  Stack Trace:
+     at AFKtor.Diagnostics.DiagnosticHistoryStore.WriteAsync(DiagnosticEvent record, CancellationToken cancellationToken) in /workspace/AFKter/src/AFKtor.Diagnostics/DiagnosticHistoryStore.cs:line 7
+   at AFKtor.Tests.DiagnosticHistoryTests.ConcurrentOwnerDegradesAndReleasedOwnershipCanRecover() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 71
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.GetResult()
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+  Failed CorruptAndIncompleteLinesAreSkippedAndReportedAfterRestart [3 ms]
+  Error Message:
+   System.NotImplementedException : The method or operation is not implemented.
+  Stack Trace:
+     at AFKtor.Diagnostics.DiagnosticHistoryStore.WriteAsync(DiagnosticEvent record, CancellationToken cancellationToken) in /workspace/AFKter/src/AFKtor.Diagnostics/DiagnosticHistoryStore.cs:line 7
+   at AFKtor.Tests.DiagnosticHistoryTests.CorruptAndIncompleteLinesAreSkippedAndReportedAfterRestart() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 37
+   at AFKtor.Tests.DiagnosticHistoryTests.CorruptAndIncompleteLinesAreSkippedAndReportedAfterRestart() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 37
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.GetResult()
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+  Failed ExpiryRemovesMixedAgeSegmentAndLeavesBoundedRunTombstoneAcrossRestart [2 ms]
+  Error Message:
+   System.NotImplementedException : The method or operation is not implemented.
+  Stack Trace:
+     at AFKtor.Diagnostics.DiagnosticHistoryStore.WriteAsync(DiagnosticEvent record, CancellationToken cancellationToken) in /workspace/AFKter/src/AFKtor.Diagnostics/DiagnosticHistoryStore.cs:line 7
+   at AFKtor.Tests.DiagnosticHistoryTests.ExpiryRemovesMixedAgeSegmentAndLeavesBoundedRunTombstoneAcrossRestart() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 53
+   at AFKtor.Tests.DiagnosticHistoryTests.ExpiryRemovesMixedAgeSegmentAndLeavesBoundedRunTombstoneAcrossRestart() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 61
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.GetResult()
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+  Failed MergerUsesDiskAndMemoryOnceAndNeverReturnsExpiredMemory [9 ms]
+  Error Message:
+   System.NotImplementedException : The method or operation is not implemented.
+  Stack Trace:
+     at AFKtor.Diagnostics.DiagnosticHistoryStore.WriteAsync(DiagnosticEvent record, CancellationToken cancellationToken) in /workspace/AFKter/src/AFKtor.Diagnostics/DiagnosticHistoryStore.cs:line 7
+   at AFKtor.Tests.DiagnosticHistoryTests.MergerUsesDiskAndMemoryOnceAndNeverReturnsExpiredMemory() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 114
+   at AFKtor.Tests.DiagnosticHistoryTests.MergerUsesDiskAndMemoryOnceAndNeverReturnsExpiredMemory() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 119
+   at AFKtor.Tests.DiagnosticHistoryTests.MergerUsesDiskAndMemoryOnceAndNeverReturnsExpiredMemory() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 119
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.GetResult()
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+  Failed OversizedMultibyteRecordsAreExplicitlyTruncatedWithinEncodedLimit [1 ms]
+  Error Message:
+   System.NotImplementedException : The method or operation is not implemented.
+  Stack Trace:
+     at AFKtor.Diagnostics.DiagnosticHistoryStore.WriteAsync(DiagnosticEvent record, CancellationToken cancellationToken) in /workspace/AFKter/src/AFKtor.Diagnostics/DiagnosticHistoryStore.cs:line 7
+   at AFKtor.Tests.DiagnosticHistoryTests.OversizedMultibyteRecordsAreExplicitlyTruncatedWithinEncodedLimit() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 88
+   at AFKtor.Tests.DiagnosticHistoryTests.OversizedMultibyteRecordsAreExplicitlyTruncatedWithinEncodedLimit() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 92
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.GetResult()
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+  Failed RestartRecoversOrderedEvidenceWithoutInventingShutdown [2 ms]
+  Error Message:
+   System.NotImplementedException : The method or operation is not implemented.
+  Stack Trace:
+     at AFKtor.Diagnostics.DiagnosticHistoryStore.WriteAsync(DiagnosticEvent record, CancellationToken cancellationToken) in /workspace/AFKter/src/AFKtor.Diagnostics/DiagnosticHistoryStore.cs:line 7
+   at AFKtor.Tests.DiagnosticHistoryTests.RestartRecoversOrderedEvidenceWithoutInventingShutdown() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 19
+   at AFKtor.Tests.DiagnosticHistoryTests.RestartRecoversOrderedEvidenceWithoutInventingShutdown() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 21
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.GetResult()
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+  Failed TotalBudgetCountsDamagedLeftoversAndEvictsBeforeWriting [116 ms]
+  Error Message:
+   System.NotImplementedException : The method or operation is not implemented.
+  Stack Trace:
+     at AFKtor.Diagnostics.DiagnosticHistoryStore.WriteAsync(DiagnosticEvent record, CancellationToken cancellationToken) in /workspace/AFKter/src/AFKtor.Diagnostics/DiagnosticHistoryStore.cs:line 7
+   at AFKtor.Tests.DiagnosticHistoryTests.TotalBudgetCountsDamagedLeftoversAndEvictsBeforeWriting() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 101
+   at AFKtor.Tests.DiagnosticHistoryTests.TotalBudgetCountsDamagedLeftoversAndEvictsBeforeWriting() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 104
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.BlockUntilCompleted()
+   at NUnit.Framework.Internal.MessagePumpStrategy.NoMessagePumpStrategy.WaitForCompletion(AwaitAdapter awaiter)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+
+Failed!  - Failed:     7, Passed:     0, Skipped:     0, Total:     7, Duration: 156 ms - AFKtor.Tests.dll (net10.0)

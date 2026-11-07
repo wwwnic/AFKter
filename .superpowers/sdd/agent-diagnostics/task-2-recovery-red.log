@@ -1,0 +1,53 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  AFKtor.Core -> /workspace/AFKter/src/AFKtor.Core/bin/Debug/net10.0/AFKtor.Core.dll
+  AFKtor.Diagnostics -> /workspace/AFKter/src/AFKtor.Diagnostics/bin/Debug/net10.0/AFKtor.Diagnostics.dll
+  AFKtor.Tests -> /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll
+Test run for /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed RecoveryKeepsNewestEvidenceWhenSegmentIndexLimitIsReached [627 ms]
+  Error Message:
+   System.InvalidOperationException : Sequence contains no elements
+  Stack Trace:
+     at System.Linq.ThrowHelper.ThrowNoElementsException()
+   at System.Linq.Enumerable.Single[TSource](IEnumerable`1 source)
+   at AFKtor.Tests.DiagnosticHistoryTests.RecoveryKeepsNewestEvidenceWhenSegmentIndexLimitIsReached() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 255
+   at AFKtor.Tests.DiagnosticHistoryTests.RecoveryKeepsNewestEvidenceWhenSegmentIndexLimitIsReached() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 258
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.BlockUntilCompleted()
+   at NUnit.Framework.Internal.MessagePumpStrategy.NoMessagePumpStrategy.WaitForCompletion(AwaitAdapter awaiter)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated(ContextCallback callback, Object state)
+   at NUnit.Framework.Internal.ContextUtils.DoIsolated[T](Func`1 func)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.PerformWork()
+
+  Failed UnknownRunDuringUnavailableStorageReturnsExplicitUnavailableError [600 ms]
+  Error Message:
+     Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.ServiceUnavailable))
+  Expected: ServiceUnavailable
+  But was:  NotFound
+
+  Stack Trace:
+     at AFKtor.Tests.DiagnosticHistoryTests.UnknownRunDuringUnavailableStorageReturnsExplicitUnavailableError() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 291
+   at AFKtor.Tests.DiagnosticHistoryTests.UnknownRunDuringUnavailableStorageReturnsExplicitUnavailableError() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 292
+   at NUnit.Framework.Internal.TaskAwaitAdapter.GenericAdapter`1.BlockUntilCompleted()
+   at NUnit.Framework.Internal.MessagePumpStrategy.NoMessagePumpStrategy.WaitForCompletion(AwaitAdapter awaiter)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await[TResult](Func`1 invoke)
+   at NUnit.Framework.Internal.AsyncToSyncAdapter.Await(Func`1 invoke)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.RunTestMethod(TestExecutionContext context)
+   at NUnit.Framework.Internal.Commands.TestMethodCommand.Execute(TestExecutionContext context)
+   at NUnit.Framework.Internal.Execution.SimpleWorkItem.<>c__DisplayClass3_0.<PerformWork>b__0()
+   at NUnit.Framework.Internal.ContextUtils.<>c__DisplayClass1_0`1.<DoIsolated>b__0(Object _)
+
+1)    at AFKtor.Tests.DiagnosticHistoryTests.UnknownRunDuringUnavailableStorageReturnsExplicitUnavailableError() in /workspace/AFKter/tests/AFKtor.Tests/DiagnosticHistoryTests.cs:line 291
+
+
+
+Failed!  - Failed:     2, Passed:     1, Skipped:     0, Total:     3, Duration: 1 s - AFKtor.Tests.dll (net10.0)

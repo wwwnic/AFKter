@@ -1,0 +1,9 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  AFKtor.Core -> /workspace/AFKter/src/AFKtor.Core/bin/Debug/net10.0/AFKtor.Core.dll
+  AFKtor.Diagnostics -> /workspace/AFKter/src/AFKtor.Diagnostics/bin/Debug/net10.0/AFKtor.Diagnostics.dll
+  AFKtor.Tests -> /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll
+Test run for /workspace/AFKter/tests/AFKtor.Tests/bin/Debug/net10.0/AFKtor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    19, Skipped:     0, Total:    19, Duration: 979 ms - AFKtor.Tests.dll (net10.0)
