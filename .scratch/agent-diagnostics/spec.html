@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AFKtor — Agent diagnostics design</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 54rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2, h3 { line-height: 1.2; }
+    code { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>AFKtor — Agent diagnostics design</h1>
+    <p>Design for review. Product direction and limits below were agreed during the interview; implementation defaults are identified separately. No product implementation is authorized by this document until the complete design is confirmed.</p>
+
+    <h2>Goal and agreed scope</h2>
+    <p>Make AFKtor's observations, decisions, and request outcomes inspectable by an AI development agent. Diagnostics are the agent's main evidence when debugging, so capture useful successful paths and decision inputs as well as errors. A player-facing activity history is not the goal.</p>
+    <ul>
+      <li>Develop and run most unit/integration tests on Linux. The shipped tray application still targets Windows.</li>
+      <li>Always collect a bounded history, independently of any debug viewer.</li>
+      <li>Provide durable structured logs and a read-only local HTTP API for current state and events.</li>
+      <li>Retain history across restarts for up to seven days, with a total disk-history limit of 20 MB. Both limits apply.</li>
+      <li>Start the local API automatically with the app; bind to localhost and use a generated token with local discovery.</li>
+      <li>App stability takes precedence: diagnostics must not block acceptance, cancellation, discovery, or shutdown.</li>
+      <li>Deliver records, snapshots, persistence, and API first. Defer a visual debug viewer.</li>
+    </ul>
+
+    <h2>Approaches considered</h2>
+    <p>UI/console text, as used by JoinGameAfk's inspected logger, is convenient for people but lacks a stable query contract and operation correlation. Structured files alone survive process exit but do not directly expose current live state. An API alone exposes live state but loses evidence after a crash. The agreed approach combines bounded persistent history and a read-only API over the same diagnostic model.</p>
+
+    <h2>Architecture and boundaries</h2>
+    <p>Add a cross-platform .NET 10 diagnostics service, separate from WinForms. Controller, session monitor, discovery, settings, and LCU transport publish typed observations and state transitions through a nonthrowing, nonblocking producer interface. Immutable diagnostic snapshots and event sequences are updated in memory; a bounded background pipeline performs serialization, retention, and disk I/O. The API reads these projections and stored history without invoking application actions.</p>
+    <p>Do not infer history by polling display strings: short-lived transitions can disappear between UI ticks. Instrument actual decisions at their source. Diagnostic formatting, disk work, API requests, or user callbacks must never execute inside the controller's scheduling lock. Collector failures cannot change ready-check eligibility, timing, cancellation, or retry behavior.</p>
+    <p>The Windows composition root owns startup and disposal. Linux tests compose the same collector, storage, API, and core components with simulated League behavior. No WinForms, installed League, public listener, or remote desktop is needed to exercise the diagnostic contract.</p>
+    <p>Implementation call proposed for review: use a .NET 10 Kestrel host in the cross-platform diagnostics layer for loopback HTTP, avoiding Windows HTTP URL reservations. Document its runtime/deployment dependency. A future viewer reads the same model. No raw-LCU proxy, remote-access tunnel, agent control commands, general gameflow tracking, telemetry upload, or new automation is included.</p>
+
+    <h2>Evidence contract</h2>
+    <h3>Identity, ordering, and timing</h3>
+    <p>Every application run gets a random run ID. Events carry a strictly increasing sequence within that run, UTC timestamp, monotonic elapsed time, schema version, application/build identity, stable event code, severity, source, and safe typed details. Connection generations, locally assigned observed-check IDs, and accept-attempt IDs correlate related evidence. These IDs describe AFKtor's observations; the LCU resource has no server-provided ready-check ID. Timestamp ties or wall-clock changes must not change event order.</p>
+    <p>The current snapshot includes its run ID and event-sequence watermark. Capture coherent state rather than assembling unrelated live property reads. Observations include their time so agents can distinguish current, stale, and unknown information.</p>
+    <h3>Current state</h3>
+    <ul>
+      <li>App/build version, run identity/start time, snapshot time and sequence watermark.</li>
+      <li>Connection stage, connection generation, last successful observation, and typed discovery/session failure reason.</li>
+      <li>Arming, configured delay, observed ready-check state/response/elapsed timer, and whether the initial baseline is established.</li>
+      <li>Current observed-check and attempt IDs, captured delay, scheduled deadline, remaining duration, and operation stage: waiting, verifying, dispatched, or finished.</li>
+      <li>Diagnostic health: API/storage availability, queue depth, dropped/truncated records, retention activity, and safe failure categories.</li>
+    </ul>
+    <h3>Events and detail</h3>
+    <ul>
+      <li>App start/stop, discovery result changes, connection attempts/replacements, HTTP/WSS stages, subscription/seed ordering, stream failure and recovery.</li>
+      <li>Arming changes, settings load/save outcomes, old/new effective delays, and whether defaults were used.</li>
+      <li>Ready-check observations and lifecycle transitions, initial-baseline decisions, duplicate/stale updates, and why work was skipped or suppressed.</li>
+      <li>Scheduling and cancellation: captured delay/deadline, source generation/check, exact reason, and cancellation before versus after request dispatch.</li>
+      <li>Final verification: initial/last/returned server timers, locally elapsed duration, required timer threshold, and each failed eligibility condition.</li>
+      <li>Accept dispatch, HTTP completion/failure/timeout, status code, duration, and uncertainty. A successful HTTP request is not confirmation that League accepted the match. A timeout after dispatch has an unknown outcome, not a guaranteed failed action.</li>
+      <li>Safe exception type, operation/stage, HTTP method and fixed route, error category, and stack frames where available. Diagnostic health changes and dropped-event summaries are also observable.</li>
+    </ul>
+    <p>Capture parsed, allowlisted LCU fields used in decisions. Never record lockfile contents, passwords, authorization headers, diagnostic tokens, raw authenticated response bodies, or unchecked exception messages. Stack traces must omit sensitive exception text and machine-specific absolute paths; missing symbols are reported as unavailable. Detailed logging is the default, but unchanged polling/UI ticks and repeated identical updates are coalesced with counts and first/last times rather than producing unlimited noise.</p>
+
+    <h2>Read-only local API</h2>
+    <p>Proposed v1 contract: <code>GET /diagnostics/state</code>, <code>GET /diagnostics/runs</code>, and <code>GET /diagnostics/events?runId=...&amp;afterSequence=...&amp;limit=...</code>. The current run is the default. State includes health. Run metadata and event retrieval include retained previous runs; old live snapshots are not represented as current state.</p>
+    <p>Every event result identifies its run, returned sequence range, next cursor, available history bounds, and known gaps/drops. An empty tail must be distinguishable from expired, evicted, unpersisted/lost, or unavailable history. Merge the current bounded memory history with persisted records by run ID/sequence without duplication. Only successfully persisted evidence is promised after a process exit; never imply a crash-recovered history is complete.</p>
+    <p>Use bounded pagination with explicit truncation/more-results metadata, validated parameters, response size limits, request deadlines, and bounded concurrent requests. The API and its failures have no arming, acceptance, settings-edit, or League-forwarding capability. Exact JSON field names and error codes will be versioned and documented with fixtures during planning.</p>
+    <p>Listen on <code>127.0.0.1</code> at an automatically assigned port. Generate a fresh random bearer token of at least 256 bits per API run. Publish the actual bound address, run ID, schema version, and token in a per-instance discovery file accessible only to the current OS user. Publish it only after startup succeeds; remove it on normal shutdown and validate stale descriptors against the run ID. Reject missing/invalid credentials and unsupported methods. No CORS access is enabled.</p>
+    <p>The API lives only while the app/test host runs; logs remain readable afterward. Linux testability does not imply that a cloud agent can reach a live Windows localhost listener. Remote bridging, remote authentication, and automated upload/export are deferred; retained diagnostic files can be provided to an agent through an existing file-access workflow.</p>
+
+    <h2>Persistence, bounds, and recovery</h2>
+    <p>Implementation defaults proposed for review: JSON Lines segments under <code>%LOCALAPPDATA%/AFKtor/diagnostics/history</code> on Windows, with an injected data directory in Linux tests. Interpret 20 MB as <strong>20,000,000 bytes</strong> of all app-managed history files combined, including the active segment and damaged leftovers. Discovery/token files live separately and are not history.</p>
+    <p>Rotate segments and remove the oldest retained evidence before a write would exceed the byte budget. Enforce the same budget across restarts. Count actual encoded bytes; individually bound record size, memory history, queue, query results, and failure metadata as well. Oversized detail is truncated with explicit metadata, not silently presented as complete.</p>
+    <p>Run retention cleanup on startup, before writes and history queries, and periodically while running. Do not return events older than seven days. Delete expired segments; deleting a mixed-age segment may evict some newer events, which must appear as a retention gap. Files can age while the app is off; remove expired history at the next startup. If deletion fails, report degraded storage and stop writes that cannot respect the byte limit rather than letting history grow.</p>
+    <p>Serialize storage ownership per data directory. Concurrent instances must not race retention or corrupt shared segments; if an instance cannot obtain diagnostic storage ownership, it continues normal operation with explicitly degraded persistence. Discovery files are per instance. Stale process state must not permanently prevent later recovery.</p>
+    <p>Recover complete records from earlier runs after a crash, reject/skip damaged records with a corruption/gap report, and tolerate an incomplete final line. Do not synthesize a clean shutdown or known accept result after a crash. Existing corrupted files still count toward the budget until removed.</p>
+
+    <h2>Failure isolation</h2>
+    <p>Producer calls use bounded, nonblocking in-memory work. If the queue is full, preserve normal app behavior, count lost events, update diagnostic health independently, and surface a gap/summary when a channel recovers. Repeated failures are coalesced; retries use bounded backoff without an unbounded queue. The diagnostic health reporting path must not recursively generate an event storm.</p>
+    <p>File permission errors, full disks, serialization failures, corrupt history, API bind failures, and unavailable discovery files cannot crash startup or core automation. Keep usable channels available and identify which are degraded. When all channels fail, observation is necessarily unavailable, but the app continues. Any later recovery reports the loss it can establish.</p>
+    <p>Proposed shutdown budget: up to two seconds to flush/stop diagnostics, then abandon remaining diagnostic work with no further delay to app exit. Normal shutdown flushes already queued records when possible; abrupt crashes may lose the unflushed tail. A hung diagnostic sink must not keep the process alive.</p>
+
+    <h2>Acceptance and test evidence</h2>
+    <ul>
+      <li>Linux unit tests show coherent state and correlated events for startup/disarming, delay edits, initial/disarmed skips, duplicates, scheduling, every cancellation cause, final verification decisions, reconnects, and accept outcomes.</li>
+      <li>Instrumentation with a throwing, slow, unavailable, or saturated sink does not change existing once-only acceptance, deadlines, cancellation, session identity, or shutdown behavior.</li>
+      <li>Linux integration tests start the real HTTP host and query state, current/prior-run events, pagination, history gaps, token requirements, discovery, malformed parameters, and clean shutdown without WinForms/League.</li>
+      <li>Temporary-directory and controllable-time tests enforce both retention limits, encoded-byte accounting, oversized events, restart recovery, incomplete/corrupt records, failed cleanup, and concurrent storage ownership.</li>
+      <li>Secret-marker fixtures verify that credentials, raw bodies, tokens, and sensitive exception text never reach events, history files, snapshots, or query errors. The diagnostic bearer token appears only in its restricted local discovery file and authentication handling.</li>
+      <li>The existing application tests remain green and the Windows Release target cross-compiles. Native Windows startup/discovery-file permissions and live League diagnostics still require manual verification.</li>
+    </ul>
+
+    <h2>Choices left to the implementation plan</h2>
+    <p>Set explicit finite segment, event, memory, queue, pagination, concurrency, and retry limits; define stable event/reason/error codes and JSON fixtures; select concrete interfaces and project/file boundaries; specify record framing, cursor/gap behavior, storage ownership, and recovery algorithms. These choices must preserve the agreed seven-day/20 MB limits and failure isolation, and require no new product behavior.</p>
+
+    <h2>Design check</h2>
+    <p>A fresh read-only builder check found no important unanswered questions for planning. The complete design, including the explicitly proposed implementation defaults, still awaits user confirmation before an implementation plan or product code is written.</p>
+
+    <h2>Reference and decision record</h2>
+    <p>JoinGameAfk provides useful logging call sites, but its inspected logger forwards text to the UI and console. A structured query contract, durable retention, and agent-focused decision evidence are additional AFKtor work. See <a href="../../docs/adr/0001-agent-diagnostics-use-bounded-history-and-read-api.md">the architectural decision</a>.</p>
+  </main>
+</body>
+</html>
