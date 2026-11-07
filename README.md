@@ -187,6 +187,9 @@ reference. The installed client's events and acceptance route still need live
 verification on Windows. Record the client version and results when performing
 these steps.
 
+The [tickets 1–3 review record](docs/reviews/2026-11-07-tickets-1-3.md) documents
+the individual reviews, final combined review, and automated validation.
+
 ## Conventions
 
 C# uses four spaces, file-scoped namespaces, PascalCase types/methods/properties,
