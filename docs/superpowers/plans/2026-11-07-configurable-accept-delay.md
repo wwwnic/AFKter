@@ -72,8 +72,12 @@ Save the file successfully before changing the live setting. If saving fails, sh
 - [x] Ensure settings disposal follows tray shutdown and that rendering/network discovery continue while the window is open.
 - [x] Update README with the range, storage path, fallback/error behavior, and exact manual checks: first-launch default, save/restart persistence while disarmed, edit during countdown, next-check delay, countdown clearing, and settings-window shutdown.
 - [x] Run `dotnet test AFKtor.slnx -p:EnableWindowsTargeting=true`, `dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true`, and `git diff --check`. Require zero test failures and zero build warnings/errors.
-- [ ] Review the complete diff against ticket 03 and each review-focus condition. Record test results and outstanding Windows/League checks in the ticket comments; commit the deliverable.
+- [x] Review the complete diff against ticket 03 and each review-focus condition. Record test results and outstanding Windows/League checks in the ticket comments; commit the deliverable.
 
 ## Execution
 
 Approved 2026-11-07; implement inline in this chat. Branch: `codex/ticket-3-configurable-delay`, based on ticket 02 commit `886175c`. Do not report live acceptance checks complete until performed with Windows and League.
+
+## Verification record
+
+Implemented in `764ff01`, `b4a1b0c`, and `7e9f014`. All 95 tests passed and the Release Windows cross-build reported zero warnings/errors. Independent read-only whole-branch review found no defects. Native WinForms, Windows filesystem, and installed League checks remain pending, including the inherited conservative timer policy at zero delay. The task used its existing cloud checkout and feature branch; no additional worktree was created. No review findings were deferred.
