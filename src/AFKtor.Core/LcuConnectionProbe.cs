@@ -1,7 +1,3 @@
-using System.Globalization;
-using System.Net.Http.Headers;
-using System.Text;
-
 namespace AFKtor.Core;
 
 public sealed class LcuConnectionProbe(
@@ -27,19 +23,11 @@ public sealed class LcuConnectionProbe(
     private async Task<bool> ProbeAsync(CancellationToken cancellationToken)
     {
         var contents = await readLockfile(cancellationToken);
-        var fields = contents?.Trim().Split(':');
-        if (fields is not { Length: 5 } || fields[0] != "LeagueClient" ||
-            !int.TryParse(fields[1], out var processId) || processId <= 0 ||
-            !int.TryParse(fields[2], NumberStyles.None, CultureInfo.InvariantCulture, out var port) ||
-            port is < 1 or > 65535 || string.IsNullOrWhiteSpace(fields[3]) || fields[4] != "https")
-        {
-            return false;
-        }
-
+        var connection = LcuConnection.Parse(contents);
+        if (connection is null) { return false; }
         using var request = new HttpRequestMessage(HttpMethod.Get,
-            $"https://127.0.0.1:{port}/lol-gameflow/v1/gameflow-phase");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes($"riot:{fields[3]}")));
+            connection.Endpoint("/lol-gameflow/v1/gameflow-phase"));
+        request.Headers.Authorization = connection.Authorization;
         using var response = await client.SendAsync(request, cancellationToken);
         return response.IsSuccessStatusCode;
     }

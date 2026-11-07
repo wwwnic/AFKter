@@ -6,3 +6,6 @@
 TestResults/
 .scratch/**/validation/
 .scratch/dotnet-home/
+
+# Agent execution scratch
+.superpowers/

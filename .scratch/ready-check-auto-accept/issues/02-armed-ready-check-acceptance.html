@@ -40,6 +40,8 @@
     <section>
       <h2>Comments</h2>
       <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">2026-11-07</time> — Started on branch <code>codex/ticket-2-armed-ready-check</code>, based on ticket 01's implementation branch because main still contains only the initial commit. Read the full ticket, spec, glossary, and contributor guidance. All 14 baseline NUnit tests passed. Implementation plan: <a href="../../../docs/superpowers/plans/2026-11-07-armed-ready-check.md">armed ready-check acceptance</a>. Product implementation awaits plan review; live Windows/League verification from ticket 01 is still pending.</p>
+      <p><time datetime="2026-11-07">2026-11-07</time> — Implemented armed acceptance on <code>codex/ticket-2-armed-ready-check</code>: session-scoped LCU events and HTTP revalidation, a three-second countdown, once-only acceptance, cancellation, tray arming/status controls, and reconnect/shutdown handling. All 62 NUnit tests pass, including an actual loopback TLS/WebSocket integration test. Independent review found four important defects (malformed-data recovery, first-event seed ordering, replacement-check timing, and UI-context shutdown); regression tests failed before each fix and now pass. First pending observations and uncertain timer continuity are conservatively skipped and require manual acceptance. Minor deferred: the parsed Create-event flag is retained but unused for eligibility. Installed-League/Windows tray validation remains pending in this Linux environment; follow the README manual steps. Status remains ready-for-agent because no implemented/pending-validation label is defined.</p>
     </section>
   </main>
 </body>
