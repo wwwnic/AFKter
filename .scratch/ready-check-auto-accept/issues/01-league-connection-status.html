@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>01 — Show League Client connection status in the tray</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>01 — Show League Client connection status in the tray</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd>None</dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Run AFKtor as a Windows tray app and see whether it is connected to League as the client starts, exits, or restarts.</p>
+      <p><a href="../spec.html">AFKtor v1 spec</a></p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Start AFKtor with League closed. The tray shows that League is disconnected.</li>
+        <li>Launch League and verify that AFKtor detects it and shows connected after establishing a local LCU connection.</li>
+        <li>Exit and relaunch League. The tray shows disconnected and then connected again without restarting AFKtor.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-06">2026-11-06</time> — Implemented the .NET 10 WinForms tray app, local LCU discovery/authentication, status polling, and restart recovery. Debug and Release builds passed with zero warnings; all 14 NUnit tests passed. Independent standards/spec reviews found no blocking defects. Live tray/League restart acceptance remains pending: League was not running and desktop automation denied Explorer access. Manual steps are in the root README. Status remains ready-for-agent because the tracker has no implemented/pending-validation label.</p>
+    </section>
+  </main>
+</body>
+</html>

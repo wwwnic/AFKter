@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AFKtor v1 — Ready-check auto-accept</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 48rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>AFKtor v1 — Ready-check auto-accept</h1>
+    <p>AFKtor is a Windows tray companion that accepts League of Legends ready checks after a configurable delay while the player has auto-accept armed.</p>
+
+    <h2>Player experience</h2>
+    <ol>
+      <li>AFKtor starts disarmed. The tray controls show whether League is connected and let the player arm or disarm auto-accept and change the delay.</li>
+      <li>AFKtor detects the running League Client, connects to its local LCU API, and reconnects after the client restarts. Arming lasts for the current AFKtor session.</li>
+      <li>When an armed AFKtor detects a new pending ready check, it starts a countdown using the delay set at detection. Changes apply to the next ready check.</li>
+      <li>The player can decline directly in League. An LCU event that ends the pending check, a disconnect, or disarming drops the scheduled action.</li>
+      <li>At the end of the delay, AFKtor confirms that it is still armed and that the same check is still pending on the current connection before sending one accept request. Repeated events must not schedule or send duplicate requests.</li>
+    </ol>
+    <p>V1 covers connection status, arming, delay settings, and ready-check acceptance. Champion select, overlays, and a separate cancel control are outside v1.</p>
+
+    <h2>Technology</h2>
+    <p>Use C# on .NET 10 with WinForms for the tray icon and small settings window. WinForms fits the small native interface. A WPF dashboard would make sense if a richer interface became central to the release.</p>
+    <p>Keep League Client discovery and LCU communication separate from the ready-check logic and tray UI. Use simulated events and a controllable clock to exercise scheduling, reconnects, and duplicate events in tests. Consult the <a href="../../docs/lcu-api.md">LCU and JoinGameAfk references</a> and verify the events and accept route with the installed League Client.</p>
+
+    <h2>Defaults proposed for review</h2>
+    <ul>
+      <li>Default to a 3-second delay and save the delay locally between launches.</li>
+      <li>Show the active countdown in AFKtor's status UI.</li>
+    </ul>
+
+    <h2>Acceptance checks</h2>
+    <ul>
+      <li>Start AFKtor with League closed. Launch League and verify that AFKtor connects without a restart and stays disarmed until armed by the player.</li>
+      <li>While armed, receive a ready check and verify that AFKtor sends one accept request after the configured delay, including when the pending event repeats.</li>
+      <li>Decline in League before the deadline, or disarm AFKtor during the countdown. Verify that no accept request is sent.</li>
+      <li>Change the delay during a countdown. Verify that the current deadline stays the same and the next ready check uses the new setting.</li>
+      <li>Restart League while AFKtor is armed. Verify that AFKtor reconnects, discards any action from the old connection, and accepts the next eligible ready check once. Restart AFKtor and verify that it starts disarmed.</li>
+    </ul>
+  </main>
+</body>
+</html>

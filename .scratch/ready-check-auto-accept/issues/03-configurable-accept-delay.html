@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>03 — Configure the accept delay and see the countdown</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>03 — Configure the accept delay and see the countdown</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="02-armed-ready-check-acceptance.html">02 — Accept a pending ready check once while armed</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Choose how long AFKtor waits before accepting, see the current countdown, and keep the chosen delay across launches.</p>
+      <p><a href="../spec.html">AFKtor v1 spec</a></p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>On first launch, the setting shows a 3-second delay. Save a different delay and verify it survives restarting AFKtor while auto-accept starts disarmed.</li>
+        <li>An eligible ready check starts a visible countdown. The countdown clears when the check ends, the action is canceled, or the request is sent.</li>
+        <li>Change the delay during an active countdown. Verify that the current ready check keeps its original deadline and the next ready check uses the new delay.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>02 — Accept a pending ready check once while armed</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>02 — Accept a pending ready check once while armed</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="01-league-connection-status.html">01 — Show League Client connection status in the tray</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Arm AFKtor from the tray to have it accept an eligible League ready check after a 3-second delay.</p>
+      <p><a href="../spec.html">AFKtor v1 spec</a></p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>AFKtor starts disarmed and sends no accept request for a ready check detected while disarmed.</li>
+        <li>While armed, a new pending ready check schedules one accept. Verify that AFKtor sends exactly one request after the delay, even if the pending event repeats, and only if the same check remains pending on the current connection.</li>
+        <li>Declining in League, expiration, disarming, or losing the connection before the deadline prevents the scheduled accept.</li>
+        <li>Restarting League preserves arming and discards pending work from the old connection. The next eligible check is accepted once. Restarting AFKtor resets arming.</li>
+        <li>Verify the ready-check events and accept route with the installed client. Use simulated events and a controllable clock to verify duplicate events and cancellation.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+    </section>
+  </main>
+</body>
+</html>
