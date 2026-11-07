@@ -7,10 +7,14 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly CancellationTokenSource stopping = new();
     private readonly HttpClient client;
     private readonly ReadyCheckController controller = new();
+    private readonly AcceptDelaySettingsStore settingsStore = new(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "settings.json"));
     private readonly ReadyCheckSessionMonitor monitor;
     private readonly ToolStripMenuItem status = new("League: Disconnected") { Enabled = false };
     private readonly ToolStripMenuItem autoAcceptStatus = new("Auto-accept: Disarmed") { Enabled = false };
     private readonly ToolStripMenuItem arm = new("Arm auto-accept") { CheckOnClick = true };
+    private readonly ToolStripMenuItem settings = new("Settings…");
+    private SettingsForm? settingsForm;
     private readonly ContextMenuStrip menu = new();
     private readonly NotifyIcon icon;
     private readonly System.Windows.Forms.Timer discoveryTimer = new() { Interval = 2000 };
@@ -19,6 +23,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     public TrayApplicationContext()
     {
+        controller.AcceptDelay = TimeSpan.FromSeconds(settingsStore.Load().DelaySeconds);
         // LCU's self-signed certificate is trusted only by this loopback handler.
         // HTTP and WebSocket requests share the no-redirect/no-proxy policy.
         client = new HttpClient(new HttpClientHandler
@@ -39,6 +44,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         menu.Items.Add(status);
         menu.Items.Add(autoAcceptStatus);
         menu.Items.Add(arm);
+        settings.Click += (_, _) => ShowSettings();
+        menu.Items.Add(settings);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, async (_, _) => await StopAsync());
         icon = new NotifyIcon
@@ -59,6 +66,26 @@ internal sealed class TrayApplicationContext : ApplicationContext
         displayTimer.Tick += (_, _) => RenderStatus();
         discoveryTimer.Start();
         displayTimer.Start();
+    }
+
+    private void ShowSettings()
+    {
+        if (stopping.IsCancellationRequested) { return; }
+        if (settingsForm is not null)
+        {
+            settingsForm.Activate();
+            return;
+        }
+
+        settingsForm = new SettingsForm(new AcceptDelaySettings((int)controller.AcceptDelay.TotalSeconds), value =>
+        {
+            // A failed save leaves the controller's effective setting unchanged.
+            settingsStore.Save(value);
+            controller.AcceptDelay = TimeSpan.FromSeconds(value.DelaySeconds);
+        });
+        settingsForm.FormClosed += (_, _) => settingsForm = null;
+        // Modeless so tray interaction, timers and shutdown remain available.
+        settingsForm.Show();
     }
 
     private void RenderStatus()
@@ -85,6 +112,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         discoveryTimer.Stop();
         displayTimer.Stop();
         arm.Enabled = false;
+        settings.Enabled = false;
+        settingsForm?.Close();
         stopping.Cancel();
         icon.Visible = false;
         // Stop invalidates the controller immediately, then drains HTTP/event work.
@@ -100,6 +129,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             stopping.Cancel();
             discoveryTimer.Dispose();
             displayTimer.Dispose();
+            settingsForm?.Dispose();
             // Core teardown never captures the UI context, including on OS exit.
             monitor.DisposeAsync().AsTask().GetAwaiter().GetResult();
             controller.DisposeAsync().AsTask().GetAwaiter().GetResult();

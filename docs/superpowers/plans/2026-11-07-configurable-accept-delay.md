@@ -12,9 +12,9 @@
 
 **Ticket:** [03 — Configure the accept delay and see the countdown](../../../.scratch/ready-check-auto-accept/issues/03-configurable-accept-delay.html)
 
-## Proposed design for review
+## Approved design
 
-Use the spec's small settings window with a numeric delay field, Save, and Cancel. Reuse the existing tray countdown. Proposed implementation choices: whole seconds from 0 through 30; store JSON at `%LOCALAPPDATA%/AFKtor/settings.json`; default to 3 seconds for missing, malformed, or invalid settings. Zero means immediate verification before acceptance. Longer delays may outlast a ready check, which must still cancel normally.
+Use the spec's small settings window with a numeric delay field, Save, and Cancel. Reuse the existing tray countdown. Approved implementation choices: whole seconds from 0 through 30; store JSON at `%LOCALAPPDATA%/AFKtor/settings.json`; default to 3 seconds for missing, malformed, or invalid settings. Zero means immediate verification before acceptance. Longer delays may outlast a ready check, which must still cancel normally.
 
 A fixed-value tray submenu is simpler but restricts choices; a configuration-file-only interface does not provide the requested native settings window. The proposed numeric window fits the existing WinForms application without new dependencies.
 
@@ -41,12 +41,12 @@ Save the file successfully before changing the live setting. If saving fails, sh
 
 **Files:** Create `src/AFKtor.Core/AcceptDelaySettings.cs`, `src/AFKtor.Core/AcceptDelaySettingsStore.cs`, and `tests/AFKtor.Tests/AcceptDelaySettingsTests.cs`.
 
-**Interfaces:** `AcceptDelaySettings(int DelaySeconds)` validates the proposed 0–30 integer range and exposes `Default` (3 seconds). `AcceptDelaySettingsStore(string path)` exposes `Load()` and `Save(AcceptDelaySettings settings)`; startup load failures return the default, save failures propagate for UI reporting.
+**Interfaces:** `AcceptDelaySettings(int DelaySeconds)` validates the approved 0–30 integer range and exposes `Default` (3 seconds). `AcceptDelaySettingsStore(string path)` exposes `Load()` and `Save(AcceptDelaySettings settings)`; startup load failures return the default, save failures propagate for UI reporting.
 
-- [ ] Write tests for default 3, boundaries 0/30, invalid values, round-trip across store instances, missing/malformed/unreadable files, and preservation of the previous file when saving fails. Use isolated temporary directories and clean them up.
-- [ ] Run `dotnet test tests/AFKtor.Tests --filter FullyQualifiedName~AcceptDelaySettings` and confirm failure for the missing behavior.
-- [ ] Implement validated settings and JSON persistence. Write a unique temporary file beside the destination, replace only after successful serialization/write, and clean up temporary files. Save only the delay. Do not silently swallow save errors.
-- [ ] Rerun focused tests and commit the passing deliverable.
+- [x] Write tests for default 3, boundaries 0/30, invalid values, round-trip across store instances, missing/malformed/unreadable files, and preservation of the previous file when saving fails. Use isolated temporary directories and clean them up.
+- [x] Run `dotnet test tests/AFKtor.Tests --filter FullyQualifiedName~AcceptDelaySettings` and confirm failure for the missing behavior.
+- [x] Implement validated settings and JSON persistence. Write a unique temporary file beside the destination, replace only after successful serialization/write, and clean up temporary files. Save only the delay. Do not silently swallow save errors.
+- [x] Rerun focused tests and commit the passing deliverable.
 
 ## Task 2: Capture the delay per check and clear the countdown
 
@@ -54,12 +54,12 @@ Save the file successfully before changing the live setting. If saving fails, sh
 
 **Interfaces:** Add a lock-protected `TimeSpan AcceptDelay` property, defaulting to 3 seconds and using the settings range. Extend `PendingAccept` with its captured delay. Keep existing constructor and session interfaces compatible. `Remaining` describes only the waiting phase, not final verification or a request in flight.
 
-- [ ] Add deterministic clock tests for configured 0/1/5/30-second delays and no early acceptance. Supply compatible elapsed timers in fake final responses.
-- [ ] Add a test that schedules at 3 seconds, changes the setting to 5 after 1 second, observes acceptance at the original 3-second deadline, and sees the next check wait 5 seconds. Assert duplicate events preserve the deadline.
-- [ ] Add held-GET and held-POST tests asserting `Remaining` is null once waiting ends. Extend cancellation tests to assert countdown clearing on disarm, decline, expiration, disconnect, and shutdown.
-- [ ] Add configurable-delay timer-compatibility and zero-delay duplicate/final-validation tests. Confirm these new tests fail before editing production code.
-- [ ] Replace all scheduling-related hardcoded three-second values with the captured duration. Compute the final minimum elapsed time using the captured duration plus actual scheduling lateness. Clear countdown visibility when verification starts without discarding operation identity or cancellation ownership.
-- [ ] Run controller tests and the complete Core test suite. Commit when passing.
+- [x] Add deterministic clock tests for configured 0/1/5/30-second delays and no early acceptance. Supply compatible elapsed timers in fake final responses.
+- [x] Add a test that schedules at 3 seconds, changes the setting to 5 after 1 second, observes acceptance at the original 3-second deadline, and sees the next check wait 5 seconds. Assert duplicate events preserve the deadline.
+- [x] Add held-GET and held-POST tests asserting `Remaining` is null once waiting ends. Extend cancellation tests to assert countdown clearing on disarm, decline, expiration, disconnect, and shutdown.
+- [x] Add configurable-delay timer-compatibility and zero-delay duplicate/final-validation tests. Confirm these new tests fail before editing production code.
+- [x] Replace all scheduling-related hardcoded three-second values with the captured duration. Compute the final minimum elapsed time using the captured duration plus actual scheduling lateness. Clear countdown visibility when verification starts without discarding operation identity or cancellation ownership.
+- [x] Run controller tests and the complete Core test suite. Commit when passing.
 
 ## Task 3: WinForms settings and handoff
 
@@ -67,13 +67,13 @@ Save the file successfully before changing the live setting. If saving fails, sh
 
 **Interfaces:** A single owned settings window exposes the numeric delay and Save/Cancel. The tray owns the settings store and applies successful saves through `ReadyCheckController.AcceptDelay`. The tray's existing display timer renders the controller's countdown.
 
-- [ ] Load settings before starting session discovery; initialize the controller delay without arming it.
-- [ ] Add a Settings tray command. Reopening focuses the existing window. Show the effective saved value, a seconds label, and a short note that edits apply to the next ready check. Save persists then applies the delay; Cancel and closing discard edits. Show save errors without closing or changing the effective value.
-- [ ] Ensure settings disposal follows tray shutdown and that rendering/network discovery continue while the window is open.
-- [ ] Update README with the range, storage path, fallback/error behavior, and exact manual checks: first-launch default, save/restart persistence while disarmed, edit during countdown, next-check delay, countdown clearing, and settings-window shutdown.
-- [ ] Run `dotnet test AFKtor.slnx -p:EnableWindowsTargeting=true`, `dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true`, and `git diff --check`. Require zero test failures and zero build warnings/errors.
+- [x] Load settings before starting session discovery; initialize the controller delay without arming it.
+- [x] Add a Settings tray command. Reopening focuses the existing window. Show the effective saved value, a seconds label, and a short note that edits apply to the next ready check. Save persists then applies the delay; Cancel and closing discard edits. Show save errors without closing or changing the effective value.
+- [x] Ensure settings disposal follows tray shutdown and that rendering/network discovery continue while the window is open.
+- [x] Update README with the range, storage path, fallback/error behavior, and exact manual checks: first-launch default, save/restart persistence while disarmed, edit during countdown, next-check delay, countdown clearing, and settings-window shutdown.
+- [x] Run `dotnet test AFKtor.slnx -p:EnableWindowsTargeting=true`, `dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true`, and `git diff --check`. Require zero test failures and zero build warnings/errors.
 - [ ] Review the complete diff against ticket 03 and each review-focus condition. Record test results and outstanding Windows/League checks in the ticket comments; commit the deliverable.
 
 ## Execution
 
-Implement inline in this chat after review. Branch: `codex/ticket-3-configurable-delay`, based on ticket 02 commit `886175c`. Do not report live acceptance checks complete until performed with Windows and League.
+Approved 2026-11-07; implement inline in this chat. Branch: `codex/ticket-3-configurable-delay`, based on ticket 02 commit `886175c`. Do not report live acceptance checks complete until performed with Windows and League.

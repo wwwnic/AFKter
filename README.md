@@ -2,7 +2,8 @@
 
 AFKtor is a Windows tray companion for League of Legends. Ticket 01 implements
 connection status and automatic reconnection. Ticket 02 adds session-only arming
-and one delayed auto-accept attempt per eligible ready check.
+and one delayed auto-accept attempt per eligible ready check. Ticket 03 adds
+persisted delay settings and countdown lifecycle handling.
 
 ## Layout
 
@@ -27,7 +28,7 @@ dotnet run --project src/AFKtor.Tray --no-build
 
 The app has no main window. Find AFKtor in the notification area (including the
 hidden-icons flyout), hover for connection status, or right-click for status and
-**Arm auto-accept**, the active countdown, and **Exit**. Closing the terminal is not the normal tray shutdown path; use Exit.
+**Arm auto-accept**, the active countdown, **Settings…**, and **Exit**. Closing the terminal is not the normal tray shutdown path; use Exit.
 
 ```powershell
 # Full test suite
@@ -53,8 +54,8 @@ Build/test host processes may require execution outside the sandbox.
 ## Auto-accept behavior
 
 AFKtor starts **disarmed**. Use **Arm auto-accept** in the tray menu to enable it
-for this AFKtor session. A newly detected unanswered ready check starts a fixed
-**3-second** countdown, shown in the tray menu. AFKtor then re-reads its state and
+for this AFKtor session. A newly detected unanswered ready check starts a countdown
+using the configured delay (default **3 seconds**), shown in the tray menu. AFKtor then re-reads its state and
 sends one accept request only if it remains eligible. Duplicate events do not
 restart the countdown. A failed or timed-out POST is never retried for that check;
 check League and accept manually if necessary.
@@ -74,8 +75,28 @@ manually. After reconnecting, the next newly observed check is eligible. These
 conservative skips prevent accepting an ambiguously identified check.
 
 Disarm or Exit cancels work before dispatch. Once an HTTP accept request has
-been sent, cancellation cannot undo the action in League. A configurable delay
-and persisted settings belong to ticket 03.
+been sent, cancellation cannot undo the action in League.
+
+## Delay settings
+
+Open **Settings…** from the tray menu. Choose a whole number from **0 to 30
+seconds**, then Save. Zero skips the waiting period but still verifies the pending
+check before accepting. A delay longer than the ready check's lifetime will not
+force acceptance after it ends. Cancel or closing the settings window discards
+edits. The window can stay open while the tray monitors League.
+
+Each eligible check captures the delay when it is first detected. Saving a new
+delay during a countdown leaves that deadline and its verification threshold
+unchanged; the next eligible check uses the new value. The countdown clears
+when canceled or ended, and when final verification starts, before sending the
+accept request.
+
+Only the delay is saved, at `%LOCALAPPDATA%\AFKtor\settings.json`. Missing,
+unreadable, malformed, or out-of-range settings fall back to 3 seconds. A failed
+save shows an error and keeps the previous effective delay; retry after checking
+folder write access. Saves write a temporary file before replacing the old file.
+Arming and League credentials are never saved. Restarting AFKtor always starts
+disarmed, even when a saved delay is restored.
 
 ## Connection behavior
 
@@ -125,7 +146,7 @@ On Windows with the installed League Client:
 6. Start AFKtor again and verify **Arm auto-accept** is unchecked. Receive a
    ready check while disarmed: AFKtor must not accept it. Arming during that
    check must not start a countdown.
-7. Arm before the next check. Verify the menu countdown starts at three seconds
+7. With the default delay selected, arm before the next check. Verify the menu countdown starts at three seconds
    and League receives one accept at the deadline. Repeated pending updates must
    not reset the deadline or send extra requests (also covered by simulation).
 8. On separate checks, disarm during the countdown, decline in League, and let
@@ -136,6 +157,30 @@ On Windows with the installed League Client:
    reconnecting manually; the next new check must be accepted once.
 10. Verify Exit during a countdown stops the process without accepting. Restart
     AFKtor and verify it is disarmed again.
+
+Ticket 03 settings checks:
+
+1. With AFKtor closed, back up any existing settings file and remove it. Start
+   AFKtor, open Settings, and verify 3 seconds and an unchecked arming item.
+2. Save 5 seconds, exit, and restart. Verify Settings shows 5 and auto-accept is
+   still disarmed. Close with Cancel after editing; reopen and verify 5 remains.
+3. Arm and receive an eligible check. During its 5-second countdown, save 1
+   second. Verify the active countdown keeps its original deadline and the next
+   eligible check waits 1 second. Duplicate events must not reset either deadline.
+4. Verify the countdown clears on decline, expiration, disarm, disconnect, and
+   after the delay while verification or acceptance is in flight.
+5. Select 0 and verify a new eligible check is verified and accepted once without
+   waiting. Checks seen disarmed or already pending on connection remain skipped.
+6. Try 30 seconds and let a check expire sooner: it must cancel without accepting.
+7. Make the settings destination unwritable and try Save. Verify an error, the
+   old effective delay, and the open settings window; restore write access and
+   retry. Restore any backed-up settings afterward.
+8. Reopen Settings repeatedly and verify one window. Exit AFKtor while Settings
+   is open, including during a countdown; verify the window and process close.
+
+Native WinForms interactions and live League acceptance have **not** been run in
+this Linux environment. The deterministic settings/controller tests and Windows
+cross-compilation do not replace these checks.
 
 Routes and payloads are verified against the published schema and JoinGameAfk
 reference. The installed client's events and acceptance route still need live
