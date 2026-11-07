@@ -13,6 +13,6 @@ generated token plus local discovery. Normal state transitions and decision
 inputs are evidence as well as errors, but credentials and raw authenticated
 responses are excluded. Diagnostics are observers: backpressure, storage or API
 failure must degrade evidence rather than block or change application behavior.
-These choices were agreed in the design interview; the complete design and
-implementation defaults remain subject to review in the
-[diagnostics spec](../../.scratch/agent-diagnostics/spec.html).
+These choices were agreed in the design interview and accepted for the approved
+four-ticket breakdown. The [diagnostics spec](../../.scratch/agent-diagnostics/spec.html)
+and its linked ticket index record the scope, defaults, and delivery gates.

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>02 — Query retained history across restarts and failures</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>02 — Query retained history across restarts and failures</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="01-query-live-app-and-connection-diagnostics.html">01 — Query live app and connection diagnostics</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>An agent can inspect persisted evidence after a restart, discover retained runs, and query an ordered history combining current memory and disk records without duplicates. History survives process exit within both the seven-day and 20 MB limits, and the agent can distinguish evidence loss or unavailability from an empty result.</p>
+      <p><a href="../spec.html">Agent diagnostics design</a> · <a href="../ticket-breakdown.html">Ticket index and review workflow</a></p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Persist structured JSON Lines records asynchronously and retrieve retained run metadata and prior-run events through the authenticated API. Merge current memory and persisted records by run ID/sequence with stable ordering and no duplicates; do not present an old snapshot as current live state.</li>
+        <li>Enforce a total budget of 20,000,000 actual encoded bytes across all app-managed history files, including every retained run, active segment, and damaged leftover. Remove oldest evidence before a write would exceed the budget and re-establish the same accounting after restart.</li>
+        <li>Retain no queryable events older than seven days. Clean up at startup, before writes/history queries, and periodically while running; remove expired evidence at next startup after offline time. Retention eviction, including newer events removed with a mixed-age segment, is visible as a history gap.</li>
+        <li>If cleanup cannot maintain the byte budget, expose degraded persistence and stop writes that would violate the limit. Bound buffers, record sizes, retries/backoff, and failure metadata. Truncate oversized safe detail with explicit metadata; repeated failures cannot create an event storm or an unbounded queue.</li>
+        <li>Queries identify run/cursor, available sequence bounds, more-results/truncation, and known gaps or unavailable storage. An empty tail is distinguishable from expiry, eviction, dropped events, corruption, or loss that can be established. Promise crash survival only for successfully persisted records; never report an incomplete crash history as complete.</li>
+        <li>Recover complete previous-run records after abrupt exit and tolerate corrupt records or an incomplete final line without crashing the app. Record safe corruption/gap information, and do not synthesize a clean shutdown or a known acceptance outcome.</li>
+        <li>Coordinate storage ownership across concurrent instances so shared segments and retention accounting cannot be corrupted. Instances unable to obtain ownership continue app operation with explicitly degraded persistence; per-instance discovery remains distinct and stale ownership cannot permanently prevent recovery.</li>
+        <li>Linux tests use temporary directories and controllable time to verify both retention limits, multibyte byte accounting, oversized records, prior-run queries, memory/disk merging, incomplete/corrupt data, failed deletion, concurrent ownership, bounded retries, gaps, and recovery. Slow, full, locked, or unwritable storage must not change existing acceptance/cancellation or exceed the shutdown budget.</li>
+        <li>Document offline access, data lifetime and size semantics, completeness limits, and recovery troubleshooting. Keep the existing suite green, complete a separate subagent code review, and record the Windows filesystem checks still requiring native validation.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">2026-11-07</time> — Published from the approved four-ticket breakdown. Complete the ticket-specific subagent review and, after all four tickets are integrated, a fresh combined review. No product implementation is included in ticket publication.</p>
+    </section>
+  </main>
+</body>
+</html>

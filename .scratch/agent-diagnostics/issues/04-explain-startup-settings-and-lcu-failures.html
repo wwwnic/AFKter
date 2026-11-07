@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>04 — Explain startup, settings, and LCU connection failures</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>04 — Explain startup, settings, and LCU connection failures</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="01-query-live-app-and-connection-diagnostics.html">01 — Query live app and connection diagnostics</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>An agent can distinguish missing or inaccessible League discovery data, invalid connection information, settings fallback/save errors, and HTTP/WebSocket/session failures, then follow recovery through the same state/event API. Rich safe evidence must preserve the existing app behavior and credential boundaries.</p>
+      <p><a href="../spec.html">Agent diagnostics design</a> · <a href="../ticket-breakdown.html">Ticket index and review workflow</a></p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Expose safe discovery outcomes that distinguish client absence, inaccessible process/lockfile information, invalid/stale connection information, and successful discovery when the evidence permits. Do not turn unknown causes into confident classifications or record lockfile contents.</li>
+        <li>Record settings load/default/save outcomes, effective delay changes and their reasons, and failures without changing save-before-apply ordering or persisting arming. Differentiate known fallback causes where safely observable.</li>
+        <li>Record HTTP/WebSocket/session stages and outcomes, subscription/seed ordering, session replacement, stream loss, retry/recovery and shutdown. Include correlation identifiers, method/fixed route, status code, duration, typed safe failure category, and safe stack frames when available. Missing symbols or unobservable causes remain explicitly unavailable.</li>
+        <li>Sanitize evidence before collection. Secret-marker tests verify that passwords, lockfiles, authorization values, raw authenticated response bodies, diagnostic tokens, unchecked exception messages, and machine-specific absolute paths never reach snapshots, event history, or API errors. The diagnostic token appears only in its restricted descriptor/authentication handling.</li>
+        <li>Coalesce unchanged discovery polls and repeated identical failures with counts and first/last times; keep rich transition evidence bounded. Diagnostic health and gaps are visible without recursively generating more failures.</li>
+        <li>Instrumentation does not change discovery/retry cadence, loopback-only LCU destinations, connection-generation checks, settings save-before-apply behavior, arming, once-only acceptance, or cancellation policy. Diagnostic exceptions/backpressure remain isolated from these paths.</li>
+        <li>Linux tests query actual instrumentation through the API using controlled discovery/settings failures and simulated or real loopback transport. Verify safe failure classification, stage/seed-event ordering, timing/correlation, recovery, coalescing, secret exclusion, and continued operation with failing diagnostics. Native Windows process discovery and installed League are not required for these tests.</li>
+        <li>This ticket depends only on the live query slice: evidence is independently demonstrable through current-run memory/API. The generic retained-history slice must also store/query these records unchanged when integrated.</li>
+        <li>Update the agent troubleshooting workflow and native Windows/League acceptance checklist. Keep the existing suite green, cross-compile the Windows target where integration changes, complete a separate subagent code review, and record validation limits accurately.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">2026-11-07</time> — Published from the approved four-ticket breakdown. Complete the ticket-specific subagent review and, after all four tickets are integrated, a fresh combined review. No product implementation is included in ticket publication.</p>
+    </section>
+  </main>
+</body>
+</html>

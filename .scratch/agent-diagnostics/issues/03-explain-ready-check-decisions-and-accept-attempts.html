@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>03 — Explain every ready-check decision and accept attempt</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>03 — Explain every ready-check decision and accept attempt</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="01-query-live-app-and-connection-diagnostics.html">01 — Query live app and connection diagnostics</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>An agent can reconstruct an observed ready check from detection through scheduling, verification, cancellation, or accept-request outcome. The API exposes explicit decision reasons, correlated identities, coherent state, and the timing inputs that explain why AFKtor acted or skipped work.</p>
+      <p><a href="../spec.html">Agent diagnostics design</a> · <a href="../ticket-breakdown.html">Ticket index and review workflow</a></p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Query a coherent current ready-check snapshot and a correlated event timeline from the real controller. Include run, connection generation, locally assigned observed-check identity, and accept-attempt identity. Do not invent a server-provided ready-check ID; distinguish current, stale, and unknown observations.</li>
+        <li>Expose arming and configured-delay changes, baseline establishment, detected checks, initial/disarmed skips, duplicate or stale updates, scheduling, and every cancellation cause at the actual decision source. Include old/new effective values, captured delay, deadline, operation stage, observation times, and the relevant connection/check identity.</li>
+        <li>For final verification, record initial/last/returned server timers, actual local elapsed time, the required threshold, and each failed eligibility condition. Preserve conservative initial-pending, backwards-timer, and insufficient-timer skips, including zero configured delay.</li>
+        <li>Distinguish cancellation before request dispatch from cancellation after dispatch. Record dispatch, HTTP completion/failure/status, latency, and uncertainty. A completed HTTP request does not establish that League accepted the match; timeout after dispatch has an unknown outcome and must not cause an automatic retry.</li>
+        <li>Provide detailed safe decision evidence while coalescing repeated identical updates with counts and first/last times. Keep bounded fields and explicit truncation/gap metadata. Credentials, raw authenticated bodies, diagnostic tokens, and unchecked exception messages never enter event/state/query output.</li>
+        <li>Linux tests compose the actual controller, collector and query API with simulated League and a controllable clock. Verify reconstructed evidence for arming/delay edits, duplicate events, initial/disarmed skips, cancellation, reconnect, stale final reads, timer mismatch, delayed verification, and once-only dispatch. Throwing/slow/saturated diagnostics cannot alter deadlines, eligibility, cancellation, session ownership, or shutdown.</li>
+        <li>This ticket depends only on the live query slice: verify its evidence in current-run memory/API without requiring persistence. When the persistence ticket is also present, its generic store must retain/query these versioned records without special-case interpretation.</li>
+        <li>Document how an agent explains an accept, skip, cancellation, or unknown request outcome from the returned evidence. Keep existing tests green, complete a separate subagent code review, and distinguish simulated/loopback coverage from live Windows/League verification.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">2026-11-07</time> — Published from the approved four-ticket breakdown. Complete the ticket-specific subagent review and, after all four tickets are integrated, a fresh combined review. No product implementation is included in ticket publication.</p>
+    </section>
+  </main>
+</body>
+</html>

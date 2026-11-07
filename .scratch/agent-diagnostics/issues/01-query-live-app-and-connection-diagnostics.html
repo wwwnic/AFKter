@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>01 — Query live app and connection diagnostics</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>01 — Query live app and connection diagnostics</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd>None</dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>An agent can discover AFKtor&#x27;s authenticated localhost API, read a versioned current-state snapshot, and page through startup and connection-change events. The Windows app starts and stops the service automatically; Linux tests exercise the same real host without WinForms or League. This slice provides bounded live/current-run evidence; durable prior-run history follows in ticket 02.</p>
+      <p><a href="../spec.html">Agent diagnostics design</a> · <a href="../ticket-breakdown.html">Ticket index and review workflow</a></p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Starting the Windows app automatically starts a read-only local diagnostics service; a Linux test host starts the same service without WinForms or League. Query the actual listener to verify run/build identity, schema version, ordered current-run events, timestamps, and a coherent connection snapshot with a sequence watermark.</li>
+        <li>Capture app startup/shutdown and connection changes at their source. Uninstrumented fields are explicitly unavailable; do not fabricate ready-check details or infer event history by polling display strings.</li>
+        <li>Bind only to 127.0.0.1 on an assigned port and generate a fresh bearer token of at least 256 bits. A per-instance discovery descriptor exposes the bound endpoint, run ID, version, and token only to the current OS user. Publish it after successful startup, remove it on normal shutdown, and provide a way to reject stale descriptors by run identity.</li>
+        <li>Missing or incorrect credentials and unsupported methods are rejected. The API has no arming, acceptance, settings-edit, League-proxy, or remote-listening capability; no CORS access is enabled. Agents can fetch current state and events using a documented, versioned read contract.</li>
+        <li>Declare finite limits for memory history, producer work, event detail, queueing, pagination, response size, concurrent requests, request deadlines, and error metadata. Pagination returns sequence/cursor and completeness information; distinguish history eviction or dropped events from an empty tail and report truncation explicitly.</li>
+        <li>Collector/API startup errors, backpressure, throwing or hung sinks, and missing discovery access cannot block startup, ready-check operation, cancellation, discovery, or exit. Producer calls perform no formatting, disk/API I/O, or user callbacks inside scheduling locks. Diagnostic shutdown is capped at two seconds; degraded health and losses remain observable through usable channels.</li>
+        <li>Linux integration tests cover the real HTTP listener, authentication/discovery, connection changes, ordered pagination, invalid input, lifecycle, bounds, secret exclusion, and fault isolation. Keep the existing application tests passing and cross-compile the Windows Release target with zero warnings/errors.</li>
+        <li>Document agent discovery/query examples, data-contract semantics, and the runtime/deployment implications of the Kestrel host. State that a live Windows localhost endpoint is not automatically accessible to a cloud/Linux agent. Complete a separate subagent code review and record test evidence and pending native checks.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">2026-11-07</time> — Published from the approved four-ticket breakdown. Complete the ticket-specific subagent review and, after all four tickets are integrated, a fresh combined review. No product implementation is included in ticket publication.</p>
+    </section>
+  </main>
+</body>
+</html>

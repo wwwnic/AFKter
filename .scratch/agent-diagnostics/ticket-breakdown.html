@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AFKtor — Agent diagnostics tickets</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 52rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Agent diagnostics tickets</h1>
+    <p>Approved four-ticket breakdown, published as individual HTML tickets from the <a href="spec.html">agent diagnostics design</a>. All tickets use <code>ready-for-agent</code>; blockers determine which can start. Numbering starts at 01 within this feature, independently of the completed ready-check tickets.</p>
+    <p>Dependency graph: 01 → 02; 01 → 03; 01 → 04. After 01, the remaining tickets are logically unblocked; their implementations may still touch shared code and need coordinated integration.</p>
+
+    <h2><a href="issues/01-query-live-app-and-connection-diagnostics.html">01 — Query live app and connection diagnostics</a></h2>
+    <p><strong>Blocked by:</strong> None.</p>
+    <p><strong>Delivers:</strong> An agent can discover the running app's authenticated localhost API, read a versioned snapshot, and page through correlated startup and connection-change events. The Windows app starts/stops the service automatically; the same real host can be exercised on Linux without WinForms or League.</p>
+    <ul>
+      <li>Run identity, ordered event sequences, observation times, and a coherent connection snapshot can be queried. The initial scope is live/current-run evidence; uninstrumented fields are explicitly unavailable.</li>
+      <li>Local discovery publishes the actual endpoint and per-run token with current-user access. Missing/bad credentials and unsupported methods are rejected; no remote listener or action endpoints are introduced.</li>
+      <li>Current-run history, producer work, API pagination, response size, concurrency, and shutdown are bounded. Queue loss/eviction and API startup failures have explicit diagnostic health outcomes.</li>
+      <li>API or collector failure never blocks core operation. A hung sink cannot extend diagnostic shutdown beyond the two-second budget. Test these boundaries from the first slice.</li>
+      <li>Linux integration tests exercise the real listener, discovery, auth, pagination, lifecycle, failure isolation, and secret exclusion. Document an agent's query workflow and new runtime/deployment requirements.</li>
+    </ul>
+
+    <h2><a href="issues/02-query-retained-history-across-restarts.html">02 — Query retained history across restarts and failures</a></h2>
+    <p><strong>Blocked by:</strong> 01 — Query live app and connection diagnostics.</p>
+    <p><strong>Delivers:</strong> An agent can inspect persisted events after app restart, discover retained runs, and query a single ordered history combining current memory and disk evidence without duplicates.</p>
+    <ul>
+      <li>Persist structured JSON Lines records off the application path. Both seven-day retention and a 20,000,000-byte total history limit apply across all retained runs, including the active segment and damaged leftovers.</li>
+      <li>Enforce byte limits before writes; expire records on query and clean up at startup, before writes/queries, and periodically. Storage that cannot maintain the limit becomes degraded rather than continuing to grow.</li>
+      <li>Queries distinguish an empty tail from retained-history eviction, dropped events, corruption, and unavailable persistence. Report only completeness that can be established; abrupt exit may lose the unflushed tail.</li>
+      <li>Recover complete records after restart and tolerate damaged/incomplete tails without crashing the app. Coordinate storage ownership so concurrent instances cannot corrupt history or race the shared byte limit.</li>
+      <li>Bound retries, buffers, record detail, and failure metadata. Throwing, full, slow, unwritable, or locked storage does not change acceptance/cancellation or prevent shutdown.</li>
+      <li>Linux tests with temporary directories and controllable time verify both limits, encoded-byte accounting, restart/prior-run queries, memory/disk merging, corruption, failed cleanup, storage ownership, gaps, and recovery. Document offline access to retained files.</li>
+    </ul>
+
+    <h2><a href="issues/03-explain-ready-check-decisions-and-accept-attempts.html">03 — Explain every ready-check decision and accept attempt</a></h2>
+    <p><strong>Blocked by:</strong> 01 — Query live app and connection diagnostics.</p>
+    <p><strong>Delivers:</strong> An agent can reconstruct an observed ready check from detection through scheduling, verification, cancellation, or accept-request outcome using the API, with explicit reasons and timing inputs.</p>
+    <ul>
+      <li>Correlate observations, the current connection generation, locally assigned check identity, and accept attempts. Do not invent a server-provided ready-check ID.</li>
+      <li>Record initial/disarmed skips, duplicates/stale updates, arming/delay changes, captured deadlines, cancellations, and failed eligibility conditions at their actual source rather than by polling UI status strings.</li>
+      <li>Expose coherent ready-check state and operation stage in the snapshot, including current/captured delay, observation freshness, and the timing evidence used during final verification.</li>
+      <li>Separate request dispatch, HTTP success/failure, and an unknown post-timeout outcome. Request completion alone must not be presented as League confirming acceptance.</li>
+      <li>Keep detailed useful evidence, with bounded/coalesced repetitions, explicit truncation, and no credentials, raw bodies, or unchecked exception text.</li>
+      <li>Linux tests exercise the real controller plus query API using simulated League and a controllable clock. Cover cancellation, reconnect, duplicate events, stale final reads, timer rejection, delayed verification, once-only dispatch, and diagnostics backpressure/failures without changing existing behavior.</li>
+    </ul>
+
+    <h2><a href="issues/04-explain-startup-settings-and-lcu-failures.html">04 — Explain startup, settings, and LCU connection failures</a></h2>
+    <p><strong>Blocked by:</strong> 01 — Query live app and connection diagnostics.</p>
+    <p><strong>Delivers:</strong> An agent can distinguish a missing League Client, inaccessible or invalid discovery data, settings fallback/save errors, and HTTP/WebSocket/session failures, then follow recovery through the same snapshot/event API.</p>
+    <ul>
+      <li>Publish safe discovery outcomes, effective setting changes and their reasons, transport/session stages, subscription/seed ordering, and reconnect/loss/recovery events.</li>
+      <li>Include method/fixed route, status, latency, operation stage, typed failure category, and safe stack frames when available. Missing symbols and unknown causes remain explicitly unknown.</li>
+      <li>Keep sensitive lockfile data, authorization values, raw authenticated bodies, diagnostic tokens, unchecked exception messages, and machine-specific absolute paths out of evidence. The API token remains only in its restricted descriptor/authentication handling.</li>
+      <li>Do not change discovery retry timing, LCU destinations, connection identity checks, settings save-before-apply ordering, or existing acceptance/cancellation policy.</li>
+      <li>Linux tests query evidence from real instrumentation using controlled discovery/settings failures and loopback/simulated transport. Verify failure classification, event ordering/correlation, recovery, coalescing, secret exclusion, and continued app operation when diagnostics fail.</li>
+      <li>Update the agent troubleshooting workflow and Windows manual checklist. Explicitly retain the native/live validation limits of Linux tests.</li>
+    </ul>
+
+    <h2>Completion and review workflow</h2>
+    <p>Every ticket includes its own meaningful tests, documentation, and nonblocking/error-isolation checks. Keep the existing application suite green and verify Windows cross-compilation where composition/runtime dependencies change. No visual debug UI or remote Windows access bridge is included.</p>
+    <p>As requested for this project, give each implemented ticket a separate subagent review, then perform a fresh final combined review and verification when all four are integrated. Those reviews are delivery gates, not a separate horizontal implementation ticket. No preliminary wide refactor is required; any small interface extraction belongs in the first complete query slice.</p>
+  </main>
+</body>
+</html>
