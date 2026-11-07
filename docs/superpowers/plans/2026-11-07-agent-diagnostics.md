@@ -38,3 +38,13 @@ Tickets 02–04 each logically depend only on 01. Execute sequentially in this s
 ## Final verification and integration
 
 Fresh whole-feature review against baseline 7118f9e; resolve actionable findings, run full Linux tests and warning-free Windows Release cross-build, record evidence and native verification limits. Keep the no-PR/direct-main preference already established by the user; integrate and push only after review/verification pass.
+
+## User-requested pause before ticket 03
+
+Tickets 01 and 02 are implemented and independently reviewed; the Important
+findings were corrected and scoped fixes reviewed. One ticket 02 Minor remains:
+unknown prior-run queries can report 503 rather than 404 when only writing is
+disabled. Tickets 03/04 are not started and must wait for a user request to resume.
+Current work is committed and pushed to the feature branch, without merging main.
+See the [checkpoint and resume record](../../reviews/2026-11-07-agent-diagnostics-checkpoint.md).
+A final whole-feature review is still required once all four tickets are done.

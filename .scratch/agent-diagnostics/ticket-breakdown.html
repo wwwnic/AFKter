@@ -63,6 +63,9 @@
       <li>Update the agent troubleshooting workflow and Windows manual checklist. Explicitly retain the native/live validation limits of Linux tests.</li>
     </ul>
 
+    <h2>Implementation checkpoint</h2>
+    <p>Tickets 01 and 02 are implemented with independent reviews and corrected Important findings. One ticket 02 Minor remains documented. The user paused before ticket 03: tickets 03 and 04 have not started and must await a resume instruction. See the <a href="../../docs/reviews/2026-11-07-agent-diagnostics-checkpoint.md">checkpoint and resume record</a>. Main has not been merged; current work is on <code>codex/agent-diagnostics</code>.</p>
+
     <h2>Completion and review workflow</h2>
     <p>Every ticket includes its own meaningful tests, documentation, and nonblocking/error-isolation checks. Keep the existing application suite green and verify Windows cross-compilation where composition/runtime dependencies change. No visual debug UI or remote Windows access bridge is included.</p>
     <p>As requested for this project, give each implemented ticket a separate subagent review, then perform a fresh final combined review and verification when all four are integrated. Those reviews are delivery gates, not a separate horizontal implementation ticket. No preliminary wide refactor is required; any small interface extraction belongs in the first complete query slice.</p>
