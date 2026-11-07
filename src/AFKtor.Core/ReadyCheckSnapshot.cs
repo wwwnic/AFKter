@@ -38,5 +38,11 @@ public interface IReadyCheckClient
 {
     Task<ReadyCheckSnapshot> ReadAsync(CancellationToken cancellationToken);
     Task AcceptAsync(CancellationToken cancellationToken);
+    // Existing simulated clients may not expose HTTP metadata. Null explicitly means unavailable.
+    async Task<int?> AcceptWithStatusAsync(CancellationToken cancellationToken)
+    {
+        await AcceptAsync(cancellationToken).ConfigureAwait(false);
+        return null;
+    }
     Task RunAsync(Action<ReadyCheckUpdate> receive, CancellationToken cancellationToken);
 }

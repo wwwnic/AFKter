@@ -26,10 +26,14 @@ public sealed class LcuReadyCheckClient(
     }
 
     public async Task AcceptAsync(CancellationToken cancellationToken)
+        => _ = await AcceptWithStatusAsync(cancellationToken).ConfigureAwait(false);
+
+    public async Task<int?> AcceptWithStatusAsync(CancellationToken cancellationToken)
     {
         using var request = Request(HttpMethod.Post, Route + "/accept");
         using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
+        return (int)response.StatusCode;
     }
 
     private HttpRequestMessage Request(HttpMethod method, string route)

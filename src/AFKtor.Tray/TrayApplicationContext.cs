@@ -10,7 +10,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "diagnostics", "history"));
     private readonly CancellationTokenSource stopping = new();
     private readonly HttpClient client;
-    private readonly ReadyCheckController controller = new();
+    private readonly ReadyCheckController controller;
     private readonly AcceptDelaySettingsStore settingsStore = new(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "settings.json"));
     private readonly ReadyCheckSessionMonitor monitor;
@@ -27,6 +27,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     public TrayApplicationContext()
     {
+        controller = new ReadyCheckController(diagnostics: diagnostics.Collector);
         controller.AcceptDelay = TimeSpan.FromSeconds(settingsStore.Load().DelaySeconds);
         // LCU's self-signed certificate is trusted only by this loopback handler.
         // HTTP and WebSocket requests share the no-redirect/no-proxy policy.

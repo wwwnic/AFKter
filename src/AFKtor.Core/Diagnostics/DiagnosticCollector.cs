@@ -18,6 +18,8 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
     private string api = "starting", discovery = "starting", storage = "unavailable";
     private string? failure;
     private DiagnosticPersistenceStatus? persistence;
+    private ControllerDiagnosticEvidence? controller;
+    private long controllerCapturedAt;
     private ConnectionDiagnosticState connection = new(ConnectionStage.Unknown, 0, DiagnosticReason.None, null, null);
     public Guid RunId { get; } = Guid.NewGuid();
     public bool SinkDisabled => Volatile.Read(ref sinkDisabled) != 0;
@@ -28,7 +30,9 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
     private static string ReadBuild()
     {
         var value = typeof(DiagnosticCollector).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        return value is { Length: > 0 and <= 128 } ? value : "unavailable";
+        // Encode once during construction, never on a producer or controller thread.
+        return value is { Length: > 0 and <= 128 } && System.Text.Json.JsonEncodedText.Encode(value).EncodedUtf8Bytes.Length <= 128
+            ? value : "unavailable";
     }
 
     public DiagnosticCollector(IDiagnosticSink? sink = null)
@@ -82,11 +86,68 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
         finally { Monitor.Exit(gate); }
     }
 
+    internal void ObserveController(ControllerDiagnosticEvidence evidence, bool stateOnly = false)
+    {
+        if (Volatile.Read(ref stopped) != 0) return;
+        if (!Monitor.TryEnter(gate)) { Interlocked.Increment(ref producerDropped); return; }
+        try
+        {
+            if (stopped != 0) return;
+            // Late completion events retain their decision identities without regressing the live projection.
+            if (controller is null || evidence.Revision > controller.Revision)
+            { controller = evidence; controllerCapturedAt = Stopwatch.GetTimestamp(); }
+            if (stateOnly) return;
+            var code = evidence.Decision switch
+            {
+                ControllerDecision.Initialized => "controller.initialized",
+                ControllerDecision.ArmingChanged => "arming.changed",
+                ControllerDecision.DelayChanged => "delay.changed",
+                ControllerDecision.SessionStarted => "readyCheck.sessionStarted",
+                ControllerDecision.BaselineEstablished => "readyCheck.baseline",
+                ControllerDecision.CheckDetected => "readyCheck.detected",
+                ControllerDecision.InitialSkipped => "readyCheck.initialSkipped",
+                ControllerDecision.DisarmedSkipped => "readyCheck.disarmedSkipped",
+                ControllerDecision.Observed => "readyCheck.observed",
+                ControllerDecision.Duplicates => "readyCheck.duplicates",
+                ControllerDecision.StaleUpdate => "readyCheck.staleUpdate",
+                ControllerDecision.TimerBackwards => "readyCheck.timerBackwards",
+                ControllerDecision.Scheduled => "accept.scheduled",
+                ControllerDecision.Cancelled => "accept.cancelled",
+                ControllerDecision.Verifying => "accept.verifying",
+                ControllerDecision.Verification => "accept.verification",
+                ControllerDecision.Dispatched => "accept.dispatched",
+                ControllerDecision.Completed => "accept.completed",
+                ControllerDecision.Failed => "accept.failed",
+                ControllerDecision.Finished => "accept.finished",
+                _ => "readyCheck.disconnected"
+            };
+            var record = new DiagnosticEvent(1, RunId, Build, ++sequence, DateTimeOffset.UtcNow,
+                Stopwatch.GetElapsedTime(startedTimestamp).TotalMilliseconds, code, "information", "controller",
+                new(ConnectionStage.Unknown, evidence.EventGeneration, DiagnosticReason.None, evidence));
+            if (events.Count == DiagnosticLimits.MemoryEvents) { events.Dequeue(); evicted++; }
+            events.Enqueue(record);
+            if (queue is not null)
+            {
+                Interlocked.Increment(ref queueDepth);
+                if (!queue.Writer.TryWrite(record)) { Interlocked.Decrement(ref queueDepth); Interlocked.Increment(ref sinkDropped); }
+            }
+        }
+        finally { Monitor.Exit(gate); }
+    }
+
     public DiagnosticState GetState()
     {
-        lock (gate) return new(1, RunId, Build, StartedAt, DateTimeOffset.UtcNow, sequence, connection, new(), new(), new(), new(),
+        lock (gate) return new(1, RunId, Build, StartedAt, DateTimeOffset.UtcNow, sequence, connection, controller?.ReadyCheck ?? new(), controller?.Arming ?? new(), controller?.Settings ?? new(), CurrentOperation(),
             new(Volatile.Read(ref api), Volatile.Read(ref discovery), Volatile.Read(ref storage), Volatile.Read(ref queueDepth),
                 Interlocked.Read(ref producerDropped), Interlocked.Read(ref sinkDropped), evicted, Volatile.Read(ref persistence)?.Truncated ?? 0, Volatile.Read(ref failure), Volatile.Read(ref persistence)));
+    }
+
+    private OperationDiagnosticState CurrentOperation()
+    {
+        var operation = controller?.Operation ?? new();
+        return operation.RemainingSeconds is { } remaining
+            ? operation with { RemainingSeconds = Math.Max(0, remaining - Stopwatch.GetElapsedTime(controllerCapturedAt).TotalSeconds) }
+            : operation;
     }
 
     public DiagnosticRun[] GetRuns() => [new(1, RunId, Build, StartedAt, true, "memoryOnly")];
