@@ -66,6 +66,7 @@ public sealed class ReadyCheckControllerTests
         }
         clock.Advance(10);
         Assert.That(api.Accepts, Is.Zero);
+        Assert.That(c.Remaining, Is.Null);
     }
 
     [Test]
@@ -149,6 +150,7 @@ public sealed class ReadyCheckControllerTests
         var s = StartSession(c, api); c.SetArmed(true); c.Update(s, Pending(0));
         await c.DisposeAsync(); clock.Advance(10);
         Assert.That(api.Accepts, Is.Zero);
+        Assert.That(c.Remaining, Is.Null);
     }
 
     [Test]
@@ -172,6 +174,141 @@ public sealed class ReadyCheckControllerTests
         c.Update(s, new(ReadyCheckSnapshot.Inactive, IsInitial: true));
         c.SetArmed(true); c.Update(s, Pending(0)); clock.Advance(delay);
         Assert.That(api.Accepts, Is.Zero);
+    }
+
+    [TestCase(0)]
+    [TestCase(1)]
+    [TestCase(5)]
+    [TestCase(30)]
+    public async Task UsesConfiguredDelayWithoutAcceptingEarly(int seconds)
+    {
+        var clock = new ManualClock();
+        var api = new FakeReadyCheckClient
+        {
+            Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", seconds))
+        };
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        c.AcceptDelay = TimeSpan.FromSeconds(seconds);
+        var session = StartSession(c, api);
+        c.SetArmed(true);
+        c.Update(session, Pending(0));
+        if (seconds > 0)
+        {
+            clock.Advance(seconds - .001);
+            Assert.That(api.Accepts, Is.Zero);
+            Assert.That(c.Remaining!.Value.TotalMilliseconds, Is.EqualTo(1).Within(.001));
+            clock.Advance(.001);
+        }
+        else { clock.Advance(0); }
+        Assert.That(api.Accepts, Is.EqualTo(1));
+        Assert.That(c.Remaining, Is.Null);
+        c.Update(session, Pending(seconds));
+        clock.Advance(10);
+        Assert.That(api.Accepts, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task DelayEditKeepsActiveDeadlineAndAppliesToNextCheck()
+    {
+        var clock = new ManualClock();
+        var api = new FakeReadyCheckClient();
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        var session = StartSession(c, api);
+        c.SetArmed(true);
+        c.Update(session, Pending(0));
+        clock.Advance(1);
+        c.AcceptDelay = TimeSpan.FromSeconds(5);
+        c.Update(session, Pending(1));
+        Assert.That(c.Remaining!.Value.TotalSeconds, Is.EqualTo(2));
+        // Final timer of 3 proves the original verification threshold is retained.
+        api.Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", 3));
+        clock.Advance(2);
+        Assert.That(api.Accepts, Is.EqualTo(1));
+        c.Update(session, new(ReadyCheckSnapshot.Inactive));
+        c.Update(session, Pending(0));
+        clock.Advance(3);
+        Assert.That(api.Accepts, Is.EqualTo(1));
+        Assert.That(c.Remaining!.Value.TotalSeconds, Is.EqualTo(2));
+        api.Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", 5));
+        clock.Advance(2);
+        Assert.That(api.Accepts, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task CountdownClearsWhileFinalReadAndPostAreInFlight()
+    {
+        var clock = new ManualClock();
+        var read = new TaskCompletionSource<ReadyCheckSnapshot>();
+        var post = new TaskCompletionSource();
+        var api = new FakeReadyCheckClient { Read = _ => read.Task, Accept = _ => post.Task };
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        var session = StartSession(c, api);
+        c.SetArmed(true);
+        c.Update(session, Pending(0));
+        try
+        {
+            clock.Advance(3);
+            Assert.That(c.Remaining, Is.Null);
+            Assert.That(api.Accepts, Is.Zero);
+            read.SetResult(new("InProgress", "None", 3));
+            Assert.That(api.Accepts, Is.EqualTo(1));
+            Assert.That(c.Remaining, Is.Null);
+        }
+        finally
+        {
+            read.TrySetResult(new("InProgress", "None", 3));
+            post.TrySetResult();
+        }
+    }
+
+    [TestCase(5, 4, 5)]
+    [TestCase(5, 5, 10)]
+    [TestCase(0, 0, 1)]
+    public async Task ConfiguredDelayStillRequiresCompatibleFinalTimer(int seconds, double finalTimer, double actualWait)
+    {
+        var clock = new ManualClock();
+        var api = new FakeReadyCheckClient
+        {
+            Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", finalTimer))
+        };
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        c.AcceptDelay = TimeSpan.FromSeconds(seconds);
+        var session = StartSession(c, api);
+        c.SetArmed(true);
+        c.Update(session, Pending(0));
+        clock.Advance(actualWait);
+        Assert.That(api.Accepts, Is.Zero);
+        Assert.That(c.Remaining, Is.Null);
+    }
+
+    [TestCase("disarmed")]
+    [TestCase("initial")]
+    [TestCase("declined")]
+    public async Task ZeroDelayStillRequiresAnEligibleCheck(string reason)
+    {
+        var clock = new ManualClock();
+        var api = new FakeReadyCheckClient
+        {
+            Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "Declined", 0))
+        };
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        c.AcceptDelay = TimeSpan.Zero;
+        var session = reason == "initial" ? c.BeginSession(api) : StartSession(c, api);
+        if (reason != "disarmed") { c.SetArmed(true); }
+        c.Update(session, Pending(0));
+        clock.Advance(0);
+        Assert.That(api.Accepts, Is.Zero);
+        Assert.That(c.Remaining, Is.Null);
+    }
+
+    [TestCase(-1)]
+    [TestCase(31)]
+    [TestCase(1.5)]
+    public async Task RejectsInvalidDelayWithoutChangingTheEffectiveSetting(double seconds)
+    {
+        await using var c = new ReadyCheckController();
+        Assert.Throws<ArgumentOutOfRangeException>(() => c.AcceptDelay = TimeSpan.FromSeconds(seconds));
+        Assert.That(c.AcceptDelay.TotalSeconds, Is.EqualTo(3));
     }
 
     private static long StartSession(ReadyCheckController controller, IReadyCheckClient api)
@@ -213,6 +350,7 @@ internal sealed class FakeReadyCheckClient : IReadyCheckClient
 {
     public int Accepts { get; private set; }
     public bool FailAccept { get; init; }
+    public Func<CancellationToken, Task>? Accept { get; init; }
     public Func<CancellationToken, Task<ReadyCheckSnapshot>> Read { get; set; }
         = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", 6));
     public Task<ReadyCheckSnapshot> ReadAsync(CancellationToken token) => Read(token);
@@ -220,7 +358,7 @@ internal sealed class FakeReadyCheckClient : IReadyCheckClient
     {
         token.ThrowIfCancellationRequested();
         Accepts++;
-        return FailAccept ? Task.FromException(new HttpRequestException()) : Task.CompletedTask;
+        return FailAccept ? Task.FromException(new HttpRequestException()) : Accept?.Invoke(token) ?? Task.CompletedTask;
     }
     public Task RunAsync(Action<ReadyCheckUpdate> receive, CancellationToken token) => Task.Delay(Timeout.Infinite, token);
 }

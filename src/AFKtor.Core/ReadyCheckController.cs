@@ -21,17 +21,38 @@ public sealed class ReadyCheckController(
     private bool disposed;
     private double lastElapsed;
     private PendingAccept? pending;
+    private TimeSpan acceptDelay = TimeSpan.FromSeconds(AcceptDelaySettings.Default.DelaySeconds);
     private string status = "Disarmed";
 
     public bool IsArmed { get { lock (gate) { return armed; } } }
     public string Status { get { lock (gate) { return status; } } }
+    /// <summary>Changes apply only to ready checks detected after the edit.</summary>
+    public TimeSpan AcceptDelay
+    {
+        get { lock (gate) { return acceptDelay; } }
+        set
+        {
+            if (value < TimeSpan.FromSeconds(AcceptDelaySettings.MinimumSeconds) ||
+                value > TimeSpan.FromSeconds(AcceptDelaySettings.MaximumSeconds) ||
+                value.Ticks % TimeSpan.TicksPerSecond != 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Use whole seconds from 0 to 30.");
+            }
+            lock (gate)
+            {
+                ObjectDisposedException.ThrowIf(disposed, this);
+                acceptDelay = value;
+            }
+        }
+    }
     public TimeSpan? Remaining
     {
         get
         {
             lock (gate)
             {
-                return pending is null ? null : TimeSpan.FromSeconds(Math.Max(0, (pending.Deadline - clockNow()).TotalSeconds));
+                return pending is not { IsWaiting: true } ? null :
+                    TimeSpan.FromSeconds(Math.Max(0, (pending.Deadline - clockNow()).TotalSeconds));
             }
         }
     }
@@ -92,7 +113,7 @@ public sealed class ReadyCheckController(
             inCheck = true;
             lastElapsed = snapshot.ElapsedSeconds;
             if (!armed || initial) { return; }
-            var operation = new PendingAccept(session, client, clockNow().AddSeconds(3), snapshot.ElapsedSeconds);
+            var operation = new PendingAccept(session, client, clockNow() + acceptDelay, snapshot.ElapsedSeconds, acceptDelay);
             pending = operation;
             status = "Ready check — countdown";
             work.RemoveAll(task => task.IsCompleted);
@@ -105,16 +126,17 @@ public sealed class ReadyCheckController(
         var token = operation.Cancellation.Token;
         try
         {
-            await delayAsync(TimeSpan.FromSeconds(3), token).ConfigureAwait(false);
+            await delayAsync(operation.Delay, token).ConfigureAwait(false);
             double minimumElapsed;
             lock (gate)
             {
                 if (!IsCurrent(operation)) { return; }
+                operation.IsWaiting = false;
                 status = "Verifying ready check";
                 // Timer compatibility must include the local elapsed countdown,
                 // even if its continuation was delayed by a busy machine.
                 minimumElapsed = operation.InitialElapsedSeconds +
-                    Math.Max(3, 3 + (clockNow() - operation.Deadline).TotalSeconds);
+                    operation.Delay.TotalSeconds + Math.Max(0, (clockNow() - operation.Deadline).TotalSeconds);
             }
             var snapshot = await operation.Client.ReadAsync(token).ConfigureAwait(false);
             Task accepting;
@@ -192,8 +214,10 @@ public sealed class ReadyCheckController(
         await finishing.ConfigureAwait(false);
     }
 
-    private sealed record PendingAccept(long Session, IReadyCheckClient Client, DateTimeOffset Deadline, double InitialElapsedSeconds)
+    private sealed record PendingAccept(long Session, IReadyCheckClient Client, DateTimeOffset Deadline,
+        double InitialElapsedSeconds, TimeSpan Delay)
     {
+        public bool IsWaiting { get; set; } = true;
         public CancellationTokenSource Cancellation { get; } = new();
     }
 }
