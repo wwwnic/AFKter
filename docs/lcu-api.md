@@ -11,3 +11,36 @@ Use the LCU explorer to look up HTTP methods, paths, request bodies, response ty
 ## Implementation Reference
 
 Use JoinGameAfk for examples of ready-check handling, gameflow monitoring, and champion-select automation. Its draft-pick notes describe the local LCU connection and map the routes used by its implementation. [JoinGameAfk repository](https://github.com/wwwnic/JoinGameAfk) · [Draft Pick Overview](https://github.com/wwwnic/JoinGameAfk/blob/674d0927303782e46d56a7efffd819147192358b/.github/draft-pick-overview.md)
+
+## Mock Client and Scenario Replay
+
+[lol-testbed](https://github.com/Intrusive-Thots/lol-testbed) is an external Python
+LCU mock worth evaluating for lightweight development without a running League
+client. It provides HTTP endpoints, WAMP WebSocket events, temporary lockfiles,
+request history, and JSON scenario replay, including ready-check and draft
+pick/ban examples. See its [README](https://github.com/Intrusive-Thots/lol-testbed/blob/master/README.md)
+for setup and usage.
+
+Source inspection on November 8, 2026 found that it is **not yet a drop-in
+Afkter test environment**:
+
+- Its [server](https://github.com/Intrusive-Thots/lol-testbed/blob/master/mock_lcu/server.py)
+  uses HTTP; Afkter's production transport requires HTTPS/WSS.
+- It does not implement `/lol-gameflow/v1/session`,
+  `/lol-champ-select/v1/pickable-champion-ids`, or
+  `/lol-champ-select/v1/bannable-champion-ids`.
+- Its [draft sample](https://github.com/Intrusive-Thots/lol-testbed/blob/master/mock_lcu/scenarios/draft_5v5_pick_ban.json)
+  omits fields Afkter requires, including teammate `championPickIntent` and timer
+  `isInfinite`.
+
+The tool was inspected, not installed or run against Afkter. It is a candidate
+for future integration and a source of scenario ideas; adapting it should
+preserve Afkter's production identity, timing, and transport checks. Recheck the
+upstream implementation before integration because these links track its default
+branch.
+
+For a mock already exercised here, see the
+[JoinGameAfk Linux smoke results](existing-mock-client-smoke.md). Routine
+development can use focused automated checks and mock scenarios, with occasional
+real-client testing when the player uses the app. Record simulated and native
+results separately.

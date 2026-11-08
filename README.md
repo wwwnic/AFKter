@@ -154,6 +154,10 @@ Endpoint reference: [LCU schema](https://raw.githubusercontent.com/KebsCS/lcu-an
 
 ## Manual acceptance check
 
+For lightweight development without League running, see the
+[LCU mock and replay tools](docs/lcu-api.md#mock-client-and-scenario-replay),
+including the external **lol-testbed** project and its current compatibility gaps.
+
 The automated NUnit suite includes simulated events with a manually advanced
 clock, stale-response/cancellation tests, and an actual loopback TLS/WSS server
 that checks authentication, event subscription, GET, and the bodyless accept POST.
