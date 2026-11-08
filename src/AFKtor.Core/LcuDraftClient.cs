@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Text.Json;
+using System.Net.Http.Json;
 
 namespace AFKtor.Core;
 
@@ -9,7 +10,7 @@ public interface IDraftClient
 }
 
 /// <summary>Read-only, coherent HTTP snapshots; event payloads never establish admission.</summary>
-public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) : IDraftClient
+public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) : IBanDraftClient
 {
     public async Task<DraftSnapshot?> ReadAsync(CancellationToken cancellationToken)
     {
@@ -20,6 +21,37 @@ public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) 
         var after = await ReadJsonAsync("/lol-gameflow/v1/session", cancellationToken).ConfigureAwait(false);
         if (flow != ReadFlow(after)) throw new InvalidDataException("Draft lifecycle changed during read.");
         return Parse(after, select);
+    }
+
+    public async Task<IReadOnlySet<int>> ReadBannableAsync(CancellationToken cancellationToken)
+    {
+        var json = await ReadJsonAsync("/lol-champ-select/v1/bannable-champion-ids", cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var ids = JsonSerializer.Deserialize<int[]>(json);
+            if (ids is null || ids.Length > 1000 || ids.Any(id => id <= 0)) throw new InvalidDataException("Invalid bannable champions.");
+            return ids.ToHashSet();
+        }
+        catch (JsonException) { throw new InvalidDataException("Malformed bannable champions."); }
+    }
+
+    public async Task<BanRequestOutcome> CompleteBanAsync(long actionId, int championId, CancellationToken cancellationToken)
+    {
+        if (actionId < 0 || championId <= 0) throw new ArgumentOutOfRangeException(nameof(actionId));
+        using var request = new HttpRequestMessage(HttpMethod.Patch, connection.Endpoint($"/lol-champ-select/v1/session/actions/{actionId}"));
+        request.Headers.Authorization = connection.Authorization;
+        request.Content = JsonContent.Create(new { championId, completed = true });
+        try
+        {
+            using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode) return BanRequestOutcome.Accepted;
+            // Only explicit client validation/auth failures establish rejection. Server/timeout failures may have applied.
+            return response.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Unauthorized
+                or System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.Conflict
+                ? BanRequestOutcome.Rejected : BanRequestOutcome.Ambiguous;
+        }
+        catch (Exception error) when (error is HttpRequestException or IOException or OperationCanceledException)
+        { return BanRequestOutcome.Ambiguous; }
     }
 
     private async Task<string> ReadJsonAsync(string route, CancellationToken token)
@@ -68,10 +100,14 @@ public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) 
             if (players.Length > 10 || actions.Length > 50 || players.Select(p => p.CellId).Distinct().Count() != players.Length ||
                 actions.Any(a => a.Id < 0 || a.Kind == DraftActionKind.None) || actions.Select(a => a.Id).Distinct().Count() != actions.Length)
                 throw new InvalidDataException("Invalid draft members or actions.");
+            var bans = root.GetProperty("bans");
+            var banned = bans.GetProperty("myTeamBans").EnumerateArray().Concat(bans.GetProperty("theirTeamBans").EnumerateArray())
+                .Select(b => b.GetInt32()).Where(id => id > 0).ToImmutableArray();
+            if (banned.Length > 20) throw new InvalidDataException("Invalid draft bans.");
             var timer = root.GetProperty("timer");
             return new(id, flow.QueueId, root.GetProperty("localPlayerCellId").GetInt64(), players, actions,
                 timer.GetProperty("adjustedTimeLeftInPhase").GetInt64(), timer.GetProperty("isInfinite").GetBoolean(),
-                root.GetProperty("isCustomGame").GetBoolean(), root.GetProperty("isSpectating").GetBoolean());
+                root.GetProperty("isCustomGame").GetBoolean(), root.GetProperty("isSpectating").GetBoolean(), banned);
         }
         catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
         { throw new InvalidDataException("Malformed draft state."); }
