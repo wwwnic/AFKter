@@ -1,6 +1,6 @@
 # Read-only draft observer — ticket 01
 
-AFKtor now samples draft state alongside ready-check monitoring. The tray menu
+Afkter now samples draft state alongside ready-check monitoring. The tray menu
 shows admission, queue, assigned role, local active action ID/type, and the last
 observed timer. The ban pipeline now adds its status alongside this observation; see
 [planned bans](planned-bans.md). The shipped native-readiness gate keeps draft writes disabled. `Admitted`
@@ -10,12 +10,12 @@ This ticket sends no draft action requests. Ready-check acceptance is unchanged.
 
 ## State and lifecycle
 
-`DraftObserver` is UI-independent and consumes immutable snapshots. A new AFKtor
+`DraftObserver` is UI-independent and consumes immutable snapshots. A new Afkter
 process starts disabled. The existing tray arming item enables observation
 admission too; disabling invalidates admission for that draft. Rearming during
 the same draft does not restore it. Enabling requires fresh idle evidence or a
 subsequently different authoritative game ID. Enabled state survives successive
-matches and League credential changes within the running AFKtor process.
+matches and League credential changes within the running Afkter process.
 
 `DraftSessionMonitor` owns serialized reads on the host's two-second discovery
 tick. Each credential lifetime gets a new generation; each successful read gets
@@ -66,7 +66,7 @@ Research performed November 8, 2026:
   Its [timer code](https://github.com/wwwnic/JoinGameAfk/blob/674d0927303782e46d56a7efffd819147192358b/JoinGameAfk.Plugin/Phase/ChampionSelect/ChampSelect.Timer.cs)
   interprets `adjustedTimeLeftInPhase` as milliseconds; its helper uses positive
   `gameId` as draft identity. The schema describes adjusted time as sync-adjusted
-  phase time, so AFKtor reports the supplied value without inventing an epoch
+  phase time, so Afkter reports the supplied value without inventing an epoch
   deadline. Infinite timers are observe only.
 
 The fixture under `tests/AFKtor.Tests/Fixtures/draft/ban.json` is synthetic and
@@ -101,8 +101,8 @@ Cross-compilation and simulated HTTP/replay tests cannot close these gates:
    `adjustedTimeLeftInPhase` units/resets and infinite semantics against League.
 3. On Windows, inspect menu status/timer readability and refresh cadence. Verify
    disarm/rearm, enabling already in draft, League credential restart, disconnect
-   and AFKtor Exit. An ongoing/reconnected draft must stay observe only until a
-   demonstrably new draft; AFKtor restart must be disabled.
+   and Afkter Exit. An ongoing/reconnected draft must stay observe only until a
+   demonstrably new draft; Afkter restart must be disabled.
 4. Capture sanitized read-only evidence and confirm **zero draft writes**, while
    existing armed ready-check acceptance continues to behave as before.
 

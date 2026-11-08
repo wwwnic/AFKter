@@ -1,6 +1,6 @@
-# AFKtor
+# Afkter
 
-AFKtor is a Windows tray companion for League of Legends. Ticket 01 implements
+Afkter is a Windows tray companion for League of Legends. Ticket 01 implements
 connection status and automatic reconnection. Ticket 02 adds session-only arming
 and one delayed auto-accept attempt per eligible ready check. Ticket 03 adds
 persisted delay settings and countdown lifecycle handling.
@@ -10,6 +10,11 @@ admission in the tray and diagnostics. See [observer behavior, API evidence and
 remaining native checks](docs/draft-observer.md). The planned-ban pipeline is implemented,
 with an explicit shipped gate that keeps draft writes disabled pending installed-client
 verification. See [ban behavior and readiness evidence](docs/planned-bans.md).
+
+The app name is **Afkter**. Existing `AFKtor.*` project, assembly, and namespace
+identifiers and the `X-AFKtor-Run-Id` diagnostics header remain unchanged. Saved
+settings, role plans, and diagnostics continue using `%LOCALAPPDATA%\AFKtor`
+so existing data stays available.
 
 ## Layout
 
@@ -32,7 +37,7 @@ dotnet build AFKtor.slnx --no-restore
 dotnet run --project src/AFKtor.Tray --no-build
 ```
 
-The app has no main window. Find AFKtor in the notification area (including the
+The app has no main window. Find Afkter in the notification area (including the
 hidden-icons flyout), hover for connection status, or right-click for status and
 **Arm auto-accept**, the active countdown, **Settings…**, and **Exit**. Closing the terminal is not the normal tray shutdown path; use Exit.
 
@@ -59,9 +64,9 @@ Build/test host processes may require execution outside the sandbox.
 
 ## Auto-accept behavior
 
-AFKtor starts **disarmed**. Use **Arm auto-accept** in the tray menu to enable it
-for this AFKtor session. A newly detected unanswered ready check starts a countdown
-using the configured delay (default **3 seconds**), shown in the tray menu. AFKtor then re-reads its state and
+Afkter starts **disarmed**. Use **Arm auto-accept** in the tray menu to enable it
+for this Afkter session. A newly detected unanswered ready check starts a countdown
+using the configured delay (default **3 seconds**), shown in the tray menu. Afkter then re-reads its state and
 sends one accept request only if it remains eligible. Duplicate events do not
 restart the countdown. A failed or timed-out POST is never retried for that check;
 check League and accept manually if necessary.
@@ -69,9 +74,9 @@ check League and accept manually if necessary.
 Disarming, accepting/declining in League, the check ending, event-stream loss,
 or changed League credentials cancels pending work. Disarming and rearming does
 not revive the same check. Checks detected disarmed are skipped. Arming survives
-League restarts; restarting AFKtor resets arming. No arming state is saved.
+League restarts; restarting Afkter resets arming. No arming state is saved.
 
-The LCU resource has no check ID. AFKtor tracks uninterrupted check lifecycles
+The LCU resource has no check ID. Afkter tracks uninterrupted check lifecycles
 within one event-stream session and treats a backwards elapsed timer as uncertain.
 The final timer must also be compatible with the locally elapsed countdown;
 insufficient timer evidence skips that check rather than guessing its identity.
@@ -101,17 +106,17 @@ Only the delay is saved, at `%LOCALAPPDATA%\AFKtor\settings.json`. Missing,
 unreadable, malformed, or out-of-range settings fall back to 3 seconds. A failed
 save shows an error and keeps the previous effective delay; retry after checking
 folder write access. Saves write a temporary file before replacing the old file.
-Arming and League credentials are never saved. Restarting AFKtor always starts
+Arming and League credentials are never saved. Restarting Afkter always starts
 disarmed, even when a saved delay is restored.
 
 ## Connection behavior
 
-AFKtor starts disconnected and checks every two seconds, without overlapping
+Afkter starts disconnected and checks every two seconds, without overlapping
 requests. It finds `LeagueClient.exe`, reads the adjacent lockfile with shared
 read access, validates its process ID, and re-reads it on each check. This supports
 custom install directories and refreshed credentials after client restarts.
 
-AFKtor opens an authenticated WSS event stream and reads
+Afkter opens an authenticated WSS event stream and reads
 `/lol-matchmaking/v1/ready-check`. A successful snapshot or event marks the
 session connected. It subscribes to `OnJsonApiEvent_lol-matchmaking_v1_ready-check`
 and revalidates through HTTP before `POST /lol-matchmaking/v1/ready-check/accept`.
@@ -120,7 +125,7 @@ missing credentials, authentication failures, and request timeouts invalidate th
 session. Discovery retries every two seconds without overlapping; HTTP and
 connection attempts have three-second timeouts. WebSocket keepalive uses a
 one-second interval and three-second timeout to detect an unresponsive stream.
-AFKtor must run as the same Windows user and with sufficient access to
+Afkter must run as the same Windows user and with sufficient access to
 inspect League; an inaccessible client remains disconnected.
 
 LCU uses a self-signed certificate. HTTP and WebSocket share the dedicated handler. Certificate validation is relaxed only in
@@ -142,15 +147,15 @@ dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true
 
 On Windows with the installed League Client:
 
-1. Close League, then start AFKtor. Verify tooltip/menu say **League: Disconnected**.
+1. Close League, then start Afkter. Verify tooltip/menu say **League: Disconnected**.
 2. Launch League normally. After the LCU API becomes available, verify **League: Connected**.
 3. Exit League. Verify **Disconnected** within roughly five seconds.
-4. Relaunch League. Verify **Connected** without restarting AFKtor.
-5. Use AFKtor's **Exit** while connected or while League is starting. Verify the
+4. Relaunch League. Verify **Connected** without restarting Afkter.
+5. Use Afkter's **Exit** while connected or while League is starting. Verify the
    icon disappears and the process exits.
 
-6. Start AFKtor again and verify **Arm auto-accept** is unchecked. Receive a
-   ready check while disarmed: AFKtor must not accept it. Arming during that
+6. Start Afkter again and verify **Arm auto-accept** is unchecked. Receive a
+   ready check while disarmed: Afkter must not accept it. Arming during that
    check must not start a countdown.
 7. With the default delay selected, arm before the next check. Verify the menu countdown starts at three seconds
    and League receives one accept at the deadline. Repeated pending updates must
@@ -162,12 +167,12 @@ On Windows with the installed League Client:
    canceled and arming stays enabled. Accept any check already pending when
    reconnecting manually; the next new check must be accepted once.
 10. Verify Exit during a countdown stops the process without accepting. Restart
-    AFKtor and verify it is disarmed again.
+    Afkter and verify it is disarmed again.
 
 Ticket 03 settings checks:
 
-1. With AFKtor closed, back up any existing settings file and remove it. Start
-   AFKtor, open Settings, and verify 3 seconds and an unchecked arming item.
+1. With Afkter closed, back up any existing settings file and remove it. Start
+   Afkter, open Settings, and verify 3 seconds and an unchecked arming item.
 2. Save 5 seconds, exit, and restart. Verify Settings shows 5 and auto-accept is
    still disarmed. Close with Cancel after editing; reopen and verify 5 remains.
 3. Arm and receive an eligible check. During its 5-second countdown, save 1
@@ -181,7 +186,7 @@ Ticket 03 settings checks:
 7. Make the settings destination unwritable and try Save. Verify an error, the
    old effective delay, and the open settings window; restore write access and
    retry. Restore any backed-up settings afterward.
-8. Reopen Settings repeatedly and verify one window. Exit AFKtor while Settings
+8. Reopen Settings repeatedly and verify one window. Exit Afkter while Settings
    is open, including during a countdown; verify the window and process close.
 
 Native WinForms interactions and live League acceptance have **not** been run in

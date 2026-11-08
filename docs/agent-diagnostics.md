@@ -271,7 +271,7 @@ inspection after restart, query `/diagnostics/runs`, then request the desired
 prior run explicitly. Keep the original damaged directory when troubleshooting;
 work on a copy if you need to preserve evidence before retention cleanup.
 For unavailable storage, check free space, directory write/delete permission,
-other live AFKtor instances and leftover file locks, then allow the bounded retry.
+other live Afkter instances and leftover file locks, then allow the bounded retry.
 Never infer a clean shutdown or an accepted match from a missing event.
 
 Native Windows checks remain: NTFS sharing/locking and crash release, deletion

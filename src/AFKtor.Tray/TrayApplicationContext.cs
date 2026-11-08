@@ -5,6 +5,7 @@ namespace AFKtor.Tray;
 
 internal sealed class TrayApplicationContext : ApplicationContext
 {
+    // Retain the legacy AFKtor data directory so existing settings, plans and history remain available.
     private readonly DiagnosticRuntime diagnostics = DiagnosticRuntime.Start(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "diagnostics", "discovery"), historyDirectory: Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "diagnostics", "history"));
@@ -79,7 +80,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         icon = new NotifyIcon
         {
             Icon = SystemIcons.Application,
-            Text = "AFKtor — League: Disconnected — Disarmed",
+            Text = "Afkter — League: Disconnected — Disarmed",
             ContextMenuStrip = menu,
             Visible = true
         };
@@ -139,7 +140,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         autoAcceptStatus.Text = remaining is { } time && time > TimeSpan.Zero
             ? $"Auto-accept: accepting in {time.TotalSeconds:0.0}s"
             : $"Auto-accept: {controller.Status}";
-        icon.Text = $"AFKtor — {status.Text} — {(controller.IsArmed ? "Armed" : "Disarmed")}";
+        icon.Text = $"Afkter — {status.Text} — {(controller.IsArmed ? "Armed" : "Disarmed")}";
         icon.Icon = monitor.IsConnected ? SystemIcons.Information : SystemIcons.Application;
     }
 

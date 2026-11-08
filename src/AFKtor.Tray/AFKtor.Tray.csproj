@@ -3,6 +3,9 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyTitle>Afkter</AssemblyTitle>
+    <Product>Afkter</Product>
+    <Description>Afkter — League of Legends tray companion</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../AFKtor.Core/AFKtor.Core.csproj" />

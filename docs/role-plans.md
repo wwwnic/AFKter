@@ -42,7 +42,7 @@ catalog endpoints require a running authenticated League client, so this editor
 does not depend on them. The catalog supplies identity only, never live ownership,
 pick/ban eligibility, or a fallback champion.
 
-Catalog updates ship with AFKtor releases: retrieve the current official version
+Catalog updates ship with Afkter releases: retrieve the current official version
 and replace the snapshot, then run catalog and persistence tests. The app performs
 no network refresh. A new champion absent from the bundled snapshot cannot be
 added until an update ships. Older snapshots remain usable when offline. If the

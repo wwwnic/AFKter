@@ -6,7 +6,7 @@ internal sealed class SettingsForm : Form
 {
     public SettingsForm(AcceptDelaySettings settings, Action<AcceptDelaySettings> saveSettings)
     {
-        Text = "AFKtor settings";
+        Text = "Afkter settings";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;

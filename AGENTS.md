@@ -2,7 +2,7 @@
 
 ## Project Structure
 
-AFKtor is an initial Git repository. The first project contribution should add a root `README.md` that identifies the application entry point and the locations of source code, tests, and assets. Follow the chosen framework's directory conventions. Add a `.gitignore` for generated output, caches, and machine-specific settings when introducing tooling.
+Afkter is an initial Git repository. The first project contribution should add a root `README.md` that identifies the application entry point and the locations of source code, tests, and assets. Follow the chosen framework's directory conventions. Add a `.gitignore` for generated output, caches, and machine-specific settings when introducing tooling.
 
 ## League Client Reference
 

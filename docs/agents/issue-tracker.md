@@ -1,6 +1,6 @@
 # Issue Tracker
 
-AFKtor uses local HTML for specs, tickets, and Wayfinder maps. Follow these paths when a skill gives Markdown defaults for tracker artifacts.
+Afkter uses local HTML for specs, tickets, and Wayfinder maps. Follow these paths when a skill gives Markdown defaults for tracker artifacts.
 
 ## Publish and fetch
 

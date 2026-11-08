@@ -20,7 +20,7 @@ internal sealed class RolePlansForm : Form
     public RolePlansForm(RolePlanService plans, ChampionCatalog catalog)
     {
         this.plans = plans; this.catalog = catalog; editor = new(plans);
-        Text = "AFKtor role plans";
+        Text = "Afkter role plans";
         ClientSize = new Size(760, 510);
         MinimumSize = new Size(700, 500);
         StartPosition = FormStartPosition.CenterScreen;
@@ -52,7 +52,7 @@ internal sealed class RolePlansForm : Form
             AutoSize = true,
             MaximumSize = new Size(720, 0),
             Text = "Edits apply immediately and autosave. Highest priority is first. Empty lists mean no planned action.\n" +
-                (catalog.Available ? $"Champion identities: Riot Data Dragon {catalog.Version} (bundled; updated with AFKtor releases)." :
+                (catalog.Available ? $"Champion identities: Riot Data Dragon {catalog.Version} (bundled; updated with Afkter releases)." :
                 "Champion catalog unavailable. Editing is disabled; stored plans are preserved.") +
                 (plans.Recovery is PlanRecovery.Rejected or PlanRecovery.Unavailable ?
                 "\nStored plans could not be loaded. Effective plans are empty; the original file is preserved until you edit." : "")
