@@ -53,14 +53,7 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
             var localPicks = snapshot.Actions.Where(a => a.ActorCellId == snapshot.LocalCellId && a.Kind == DraftActionKind.Pick).ToArray();
             if (localPicks.FirstOrDefault(a => a.Completed) is { } completed)
             {
-                var ownSelection = actionId == completed.Id && completed.ChampionId > 0 &&
-                    (pending && outcome == BanRequestOutcome.Accepted && expected == completed.ChampionId ||
-                     acknowledged == completed.ChampionId);
-                manual |= !ownSelection;
-                completedAction = true;
-                pending = false; acknowledged = completed.ChampionId; actionId = completed.Id;
-                Publish(new(PickStatus.Completed, admission.Generation, snapshot.GameId, completed.Id,
-                    plans().Revision, completed.ChampionId, manual, Lock: true, Outcome: outcome));
+                Complete(completed, admission.Generation, snapshot.GameId);
                 return;
             }
             var active = LocalPick(snapshot);
@@ -98,9 +91,15 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
                 if (verified is null || now.Admission != DraftAdmission.Admitted || now.Generation != admission.Generation ||
                     now.GameId != snapshot.GameId || now.ActionId != active.Id || now.Action != DraftActionKind.Pick || now.Role != admission.Role || observer.ArmingEpoch != epoch || verified.GameId != snapshot.GameId ||
                     verified.QueueId != 400 || verified.Custom || verified.Spectating || verified.Infinite ||
-                    verified.LocalCellId != snapshot.LocalCellId || verifiedAction?.Id != active.Id ||
+                    verified.LocalCellId != snapshot.LocalCellId ||
                     verified.Players.Count(p => p.CellId == verified.LocalCellId) != 1 ||
                     verified.Players.Single(p => p.CellId == verified.LocalCellId).Role != admission.Role)
+                { Publish(State with { Status = PickStatus.Cancelled }); return; }
+                // A completed action is no longer active, but is authoritative terminal evidence.
+                if (verified.Actions.FirstOrDefault(a => a.Id == active.Id && a.ActorCellId == verified.LocalCellId &&
+                    a.Kind == DraftActionKind.Pick && a.Completed) is { } finalCompleted)
+                { Complete(finalCompleted, admission.Generation, verified.GameId); return; }
+                if (verifiedAction?.Id != active.Id)
                 { Publish(State with { Status = PickStatus.Cancelled }); return; }
                 // Every valid same-action observation constrains future polls, even when this pass cannot dispatch.
                 deadline = Math.Min(deadline, Elapsed + verified.TimeLeftMilliseconds - clock.GetElapsedTime(verificationStarted).TotalMilliseconds);
@@ -153,6 +152,17 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
             { if (pending) outcome = BanRequestOutcome.Ambiguous; Publish(State with { Status = pending ? PickStatus.AwaitingOutcome : PickStatus.Cancelled, Outcome = outcome }); }
         }
         finally { owner.Release(); }
+    }
+    private void Complete(DraftAction completed, long generation, long gameId)
+    {
+        var ownSelection = actionId == completed.Id && completed.ChampionId > 0 &&
+            (pending && outcome == BanRequestOutcome.Accepted && expected == completed.ChampionId ||
+             acknowledged == completed.ChampionId);
+        manual |= !ownSelection;
+        completedAction = true;
+        pending = false; acknowledged = completed.ChampionId; actionId = completed.Id;
+        Publish(new(PickStatus.Completed, generation, gameId, completed.Id,
+            plans().Revision, completed.ChampionId, manual, Lock: true, Outcome: outcome));
     }
     private void Reconcile(DraftAction action)
     {

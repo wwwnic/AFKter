@@ -74,6 +74,16 @@ November 8, 2026 validation: baseline **285/285**; final Release suite
 **304/304 passed**. Release Windows cross-build passed with **zero warnings and
 errors**; `git diff --check` passed.
 
+November 8, 2026 review follow-up: final pick verification now records a completed
+same-session local action before requiring an active action. Its actual champion,
+action and conservative manual attribution remain terminal in tray state,
+diagnostics state and history even after stale incomplete polls and timing,
+plan or policy edits. Three held-read regressions first failed with `Cancelled`
+instead of `Completed`; all now pass. Five additional guards reject unrelated
+game/action/local-cell/role/queue completion evidence without poisoning the current
+action. Release suite: **312/312 passed**; Release Windows cross-build:
+**zero warnings/errors**; `git diff --check` passed. Native gates remain false.
+
 Windows and installed League are unavailable on this Linux host. The shipped
 pick and ban `nativeSemanticsVerified` gates remain **false**. Native checks are
 pending: Settings keyboard/high-DPI layout, collapsed advanced controls, all
