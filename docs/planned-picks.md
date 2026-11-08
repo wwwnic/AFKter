@@ -4,7 +4,7 @@ Afkter implements ordered pick hover, lock and the default manual-hover watchdog
 The shipped tray explicitly keeps `nativeSemanticsVerified: false` for both picks
 and bans. It sends **zero draft writes** until installed-client semantics are
 verified. This internal gate is not a player setting. Ready-check acceptance is
-unchanged. Manual deadline policy is configurable in Settings (ticket 05); editable timing remains ticket 06.
+unchanged. Manual deadline policy is configurable in Settings (ticket 05); timing is live and configurable in Settings (ticket 06).
 
 The latest effective assigned-role pick plan supplies candidates in order. Before
 each write, the executor reads GET `/lol-champ-select/v1/pickable-champion-ids`
@@ -25,7 +25,7 @@ planned champion directly, skipping the separate hover wait/request. This avoids
 spending the host's next polling interval on a preventable urgent wait.
 At **250 ms or less** conservatively verified remaining budget, nothing dispatches.
 
-These fixed defaults use the same observed millisecond timer and urgent/minimum
+These defaults use the same observed millisecond timer and urgent/minimum
 margins as planned bans. They are initial engineering values, not measured League
 latencies. The action's monotonic deadline can only shorten: repeated observations,
 a supplied timer reset, and edits cannot extend it. Verification latency is
@@ -34,7 +34,7 @@ read persists its shorter deadline, including expiry and exhausted-plan exits;
 a later timer reset cannot revive that action. The host polls every two seconds;
 execution and watchdog scheduling are best effort and can miss short windows.
 Native acceptance must assess whether that cadence is adequate before enabling
-writes; these constants do not claim real-time guarantees or expose new settings.
+writes; these timing values do not claim real-time guarantees. See [live timing](live-timing.md) for supported ranges and live edits.
 
 Only one request can be in flight per executor. HTTP success means
 `AwaitingOutcome`, not completion. A matching incomplete hover after an accepted
@@ -64,8 +64,7 @@ draft. Editing a plan never clears that state. Shortly before expiry (the same
 The main **Settings…** dialog explains each choice. Choosing a policy immediately
 publishes a whole immutable revision and autosaves with role plans; there is no
 Apply button. Effective/saved revision, save failure, recovery warning and retry
-are visible there. The existing accept-delay buttons explicitly save or discard
-only the delay; closing the dialog never reverts a policy choice. Policy/plan edits
+are visible there. All main and advanced settings now apply live and autosave (ticket 06); closing retains valid edits. Policy/plan edits
 never clear manual takeover. Both policy and plan use the same final dispatch gate:
 a newer publication invalidates a queued decision; a policy changed during a held
 verification is evaluated before dispatch. A sent request is irrevocable and must

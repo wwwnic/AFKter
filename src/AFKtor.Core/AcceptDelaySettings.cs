@@ -1,6 +1,6 @@
 namespace AFKtor.Core;
 
-/// <summary>The only setting persisted between application launches.</summary>
+/// <summary>Legacy ready-check preference retained for compatible settings.json migration.</summary>
 public sealed record AcceptDelaySettings
 {
     public const int MinimumSeconds = 0;

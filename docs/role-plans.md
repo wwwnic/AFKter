@@ -7,7 +7,7 @@ to delete it. Each button completes exactly one edit; selecting a role/champion,
 searching, duplicate additions, and invalid moves do not publish revisions.
 There is no drag operation or Apply button. Empty lists mean no planned action.
 
-`RolePlanService.Current` supplies a complete immutable revision of role plans and
+`RolePlanService.Current` supplies a complete immutable revision of role plans, timing settings and
 the manual-pick deadline policy configured in main Settings. Changing that policy
 is one complete live edit, sharing the same publication, autosave and dispatch
 guard as plan changes. It does not clear manual takeover. The policy defaults to
@@ -21,8 +21,7 @@ files are flushed before replacement; the previous file remains intact until
 replacement. Shutdown attempts a final save. Unsaved changes can still be lost
 if the process exits while storage is unavailable; the UI never promises otherwise.
 
-Storage is `%LOCALAPPDATA%\AFKtor\role-plans.json`, independent of accept-delay
-settings. The editor shows the effective revision, saved revision, pending save,
+Storage is `%LOCALAPPDATA%\AFKtor\role-plans.json`, including migrated accept-delay settings. See [live timing](live-timing.md) for migration and reset semantics. The editor shows the effective revision, saved revision, pending save,
 and save failure. Failed writes keep the latest revision effective and retry
 automatically; Retry saving requests an immediate retry. On restart the last
 successful complete revision is recovered. Invalid schema, missing/duplicate roles,

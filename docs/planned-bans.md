@@ -17,7 +17,7 @@ teammate play intent or selected picks are skipped in order. A teammate's ban ho
 alone is not protected. An empty/exhausted list produces evidence and no request;
 a later edit or availability change is evaluated again.
 
-A local ban window normally waits at least **1,000 ms** from first detection.
+Timing is now live and configurable; see [live timing](live-timing.md). With author defaults a local ban window normally waits at least **1,000 ms** from first detection.
 Repeated observations and live edits do not restart that monotonic clock. At
 **3,000 ms or less** observed remaining time it skips pacing. Verification time is
 subtracted conservatively from the final supplied timer; at **250 ms or less**

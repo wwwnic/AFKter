@@ -1,5 +1,9 @@
 # Configurable Accept Delay Implementation Plan
 
+Historical ticket-03 contract: superseded by draft-companion ticket 06. Current
+[settings behavior](../../live-timing.md) applies live from original detection,
+autosaves with plans, and replaces Save/Cancel. This plan records the original implementation.
+
 > **For agentic workers:** Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Complete ticket 03: persist the chosen delay, show the countdown, and keep each active check's original deadline.

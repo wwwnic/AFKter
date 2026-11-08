@@ -40,7 +40,7 @@ public sealed class RolePlanService : IAsyncDisposable
             var plan = current.For(role);
             if ((list == PlanList.Picks ? plan.Picks : plan.Bans).SequenceEqual(ids)) return false;
             var replacement = list == PlanList.Picks ? plan with { Picks = [.. ids] } : plan with { Bans = [.. ids] };
-            current = new(current.Revision + 1, current.Roles.SetItem(role, replacement), current.ManualPickPolicy);
+            current = current with { Revision = current.Revision + 1, Roles = current.Roles.SetItem(role, replacement) };
             health = PlanSaveHealth.Unsaved;
             Observe();
             return true;
@@ -59,6 +59,42 @@ public sealed class RolePlanService : IAsyncDisposable
             return true;
         }
     }
+
+    /// <summary>Invalid or unfinished text never publishes. All fields share the revision gate.</summary>
+    public bool EditTiming(TimingField field, string text)
+    {
+        if (!Enum.IsDefined(field) || !int.TryParse(text, System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out var value)) return false;
+        lock (gate)
+        {
+            var timing = current.Timing;
+            return SetTiming(field switch
+            {
+                TimingField.AcceptDelay => timing with { AcceptDelaySeconds = value },
+                TimingField.ActionPacing => timing with { ActionPacingMilliseconds = value },
+                TimingField.HoverLock => timing with { HoverLockMilliseconds = value },
+                TimingField.Urgent => timing with { UrgentMilliseconds = value },
+                _ => timing with { MinimumDispatchMilliseconds = value }
+            });
+        }
+    }
+
+    public bool SetTiming(TimingSettings timing)
+    {
+        if (timing is null || !timing.IsValid) return false;
+        lock (gate)
+        {
+            if (disposed || current.Revision == long.MaxValue - 1 || current.Timing == timing) return false;
+            current = current with { Revision = current.Revision + 1, Timing = timing };
+            health = PlanSaveHealth.Unsaved;
+            Observe();
+            TimingChanged?.Invoke(timing);
+            return true;
+        }
+    }
+
+    public bool ResetTiming() => SetTiming(TimingSettings.Default);
+    public event Action<TimingSettings>? TimingChanged;
 
     /// <summary>Orders an asynchronous request's start against publication of a newer plan; never awaits under the revision gate.</summary>
     public Task<T>? StartIfCurrent<T>(long revision, Func<Task<T>> start)
@@ -94,7 +130,7 @@ public sealed class RolePlanService : IAsyncDisposable
         finally { writer.Release(); }
     }
 
-    private void Observe() => diagnostics?.ObserveRolePlans(new(current.Revision, savedRevision, health, Recovery, current.ManualPickPolicy));
+    private void Observe() => diagnostics?.ObserveRolePlans(new(current.Revision, savedRevision, health, Recovery, current.ManualPickPolicy, current.Timing));
 
     private async Task AutosaveAsync()
     {

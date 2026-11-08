@@ -207,31 +207,52 @@ public sealed class ReadyCheckControllerTests
         Assert.That(api.Accepts, Is.EqualTo(1));
     }
 
+    // Catches restarting the check clock on live edits and dispatching at a superseded due time.
     [Test]
-    public async Task DelayEditKeepsActiveDeadlineAndAppliesToNextCheck()
+    public async Task LiveDelayMovesUndispatchedDeadlineFromOriginalDetection()
     {
-        var clock = new ManualClock();
-        var api = new FakeReadyCheckClient();
+        var clock = new ManualClock(); var api = new FakeReadyCheckClient();
         await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
-        var session = StartSession(c, api);
-        c.SetArmed(true);
-        c.Update(session, Pending(0));
-        clock.Advance(1);
-        c.AcceptDelay = TimeSpan.FromSeconds(5);
-        c.Update(session, Pending(1));
-        Assert.That(c.Remaining!.Value.TotalSeconds, Is.EqualTo(2));
-        // Final timer of 3 proves the original verification threshold is retained.
+        var session = StartSession(c, api); c.SetArmed(true); c.Update(session, Pending(0));
+        clock.Advance(1); c.AcceptDelay = TimeSpan.FromSeconds(5);
+        Assert.That(c.Remaining!.Value.TotalSeconds, Is.EqualTo(4));
+        clock.Advance(2); Assert.That(api.Accepts, Is.Zero);
         api.Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", 3));
-        clock.Advance(2);
+        c.AcceptDelay = TimeSpan.FromSeconds(2);
         Assert.That(api.Accepts, Is.EqualTo(1));
-        c.Update(session, new(ReadyCheckSnapshot.Inactive));
-        c.Update(session, Pending(0));
-        clock.Advance(3);
+        c.AcceptDelay = TimeSpan.Zero; c.Update(session, Pending(3)); clock.Advance(30);
         Assert.That(api.Accepts, Is.EqualTo(1));
-        Assert.That(c.Remaining!.Value.TotalSeconds, Is.EqualTo(2));
-        api.Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", 5));
-        clock.Advance(2);
-        Assert.That(api.Accepts, Is.EqualTo(2));
+    }
+
+    // Catches a held final read bypassing a newer longer delay or reusing that stale read at the new due time.
+    [Test]
+    public async Task LengtheningDuringVerificationWaitsAndReadsAgainBeforeSending()
+    {
+        var clock = new ManualClock(); var read = new TaskCompletionSource<ReadyCheckSnapshot>();
+        var reads = 0; var api = new FakeReadyCheckClient { Read = _ => { reads++; return read.Task; } };
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        var session = StartSession(c, api); c.SetArmed(true); c.Update(session, Pending(0));
+        clock.Advance(3); c.AcceptDelay = TimeSpan.FromSeconds(30);
+        read.SetResult(new("InProgress", "None", 3));
+        Assert.That(api.Accepts, Is.Zero);
+        Assert.That(c.Remaining!.Value.TotalSeconds, Is.EqualTo(27));
+        api.Read = _ => { reads++; return Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", 30)); };
+        clock.Advance(27);
+        Assert.That(reads, Is.EqualTo(2)); Assert.That(api.Accepts, Is.EqualTo(1));
+    }
+
+    // Catches using a pre-edit final read when the newly lengthened deadline elapses while that read is held.
+    [Test]
+    public async Task EditDuringHeldReadRequiresFreshReadEvenWhenNewDeadlineHasElapsed()
+    {
+        var clock = new ManualClock(); var held = new TaskCompletionSource<ReadyCheckSnapshot>();
+        var reads = 0; var api = new FakeReadyCheckClient { Read = _ => { reads++; return held.Task; } };
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        var session = StartSession(c, api); c.SetArmed(true); c.Update(session, Pending(0));
+        clock.Advance(3); c.AcceptDelay = TimeSpan.FromSeconds(5); clock.Advance(3);
+        api.Read = _ => { reads++; return Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", 6)); };
+        held.SetResult(new("InProgress", "None", 3));
+        Assert.That(reads, Is.EqualTo(2)); Assert.That(api.Accepts, Is.EqualTo(1));
     }
 
     [Test]

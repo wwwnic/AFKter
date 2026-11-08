@@ -12,8 +12,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly CancellationTokenSource stopping = new();
     private readonly HttpClient client;
     private readonly ReadyCheckController controller;
-    private readonly AcceptDelaySettingsStore settingsStore = new(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "settings.json"));
     private readonly ReadyCheckSessionMonitor monitor;
     private readonly DraftObserver draftObserver;
     private readonly DraftSessionMonitor draftMonitor;
@@ -38,10 +36,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
     public TrayApplicationContext()
     {
         rolePlans = new RolePlanService(new RolePlanFileStore(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "role-plans.json")),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "role-plans.json"), Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "settings.json")),
             championCatalog, diagnostics.Collector);
         controller = new ReadyCheckController(diagnostics: diagnostics.Collector);
-        controller.AcceptDelay = TimeSpan.FromSeconds(settingsStore.Load().DelaySeconds);
+        controller.AcceptDelay = TimeSpan.FromSeconds(rolePlans.Current.Timing.AcceptDelaySeconds);
+        rolePlans.TimingChanged += timing => controller.AcceptDelay = TimeSpan.FromSeconds(timing.AcceptDelaySeconds);
         // LCU's self-signed certificate is trusted only by this loopback handler.
         // HTTP and WebSocket requests share the no-redirect/no-proxy policy.
         client = new HttpClient(new HttpClientHandler
@@ -118,12 +118,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        settingsForm = new SettingsForm(new AcceptDelaySettings((int)controller.AcceptDelay.TotalSeconds), value =>
-        {
-            // A failed save leaves the controller's effective setting unchanged.
-            settingsStore.Save(value);
-            controller.AcceptDelay = TimeSpan.FromSeconds(value.DelaySeconds);
-        }, rolePlans);
+        settingsForm = new SettingsForm(rolePlans, controller);
         settingsForm.FormClosed += (_, _) => settingsForm = null;
         // Modeless so tray interaction, timers and shutdown remain available.
         settingsForm.Show();

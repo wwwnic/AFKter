@@ -4,107 +4,89 @@ namespace AFKtor.Tray;
 
 internal sealed class SettingsForm : Form
 {
-    public SettingsForm(AcceptDelaySettings settings, Action<AcceptDelaySettings> saveSettings, RolePlanService plans)
+    public SettingsForm(RolePlanService plans, ReadyCheckController controller)
     {
         Text = "Afkter settings";
         FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
-        MinimizeBox = false;
+        MaximizeBox = MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(520, 440);
-
-        var delay = new NumericUpDown
+        ClientSize = new Size(590, 640);
+        var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
+            WrapContents = false, AutoScroll = true, Padding = new Padding(12) };
+        var fields = new Dictionary<TimingField, TextBox>();
+        var errors = new ErrorProvider { ContainerControl = this };
+        bool rendering = false;
+        int Value(TimingField field) => field switch
         {
-            Minimum = AcceptDelaySettings.MinimumSeconds,
-            Maximum = AcceptDelaySettings.MaximumSeconds,
-            Value = settings.DelaySeconds,
-            DecimalPlaces = 0,
-            AccessibleName = "Accept delay in seconds",
-            Width = 80,
-            TabIndex = 1
+            TimingField.AcceptDelay => plans.Current.Timing.AcceptDelaySeconds,
+            TimingField.ActionPacing => plans.Current.Timing.ActionPacingMilliseconds,
+            TimingField.HoverLock => plans.Current.Timing.HoverLockMilliseconds,
+            TimingField.Urgent => plans.Current.Timing.UrgentMilliseconds,
+            _ => plans.Current.Timing.MinimumDispatchMilliseconds
         };
-        var label = new Label { Text = "Accept &delay (seconds):", AutoSize = true, TabIndex = 0 };
-        var input = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
-        input.Controls.Add(label);
-        input.Controls.Add(delay);
-
-        var note = new Label
+        void AddField(Control parent, TimingField field, string name)
         {
-            Text = "Changes apply to the next ready check.\n0 seconds verifies and accepts immediately.",
-            AutoSize = true,
-            Margin = new Padding(3, 12, 3, 12)
-        };
-        var save = new Button { Text = "&Save delay and close", AutoSize = true, TabIndex = 0 };
-        var cancel = new Button { Text = "Close without saving delay", AutoSize = true, TabIndex = 1 };
-        var buttons = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
-            WrapContents = false,
-            TabIndex = 2
-        };
-        buttons.Controls.Add(cancel);
-        buttons.Controls.Add(save);
-        var layout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(12),
-            ColumnCount = 1,
-            RowCount = 8
-        };
-        layout.Controls.Add(input, 0, 0);
-        layout.Controls.Add(note, 0, 1);
-        layout.Controls.Add(new Label { Text = "After a manual pick change in League:", AutoSize = true }, 0, 2);
-        var policy = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 470,
+            var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+            row.Controls.Add(new Label { Text = name, Width = 390, AutoSize = false, Height = 28 });
+            var input = new TextBox { Width = 85, Text = Value(field).ToString(), AccessibleName = name };
+            fields.Add(field, input);
+            input.TextChanged += (_, _) =>
+            {
+                if (rendering) return;
+                var valid = plans.EditTiming(field, input.Text) || input.Text == Value(field).ToString();
+                errors.SetError(input, valid ? "" : "Use a whole number in the displayed range; urgent time must exceed the request safety margin. Effective settings have not changed.");
+            };
+            row.Controls.Add(input); parent.Controls.Add(row);
+        }
+        AddField(layout, TimingField.AcceptDelay, "Accept delay (seconds, 0–30):");
+        layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(540, 0), Text =
+            "Valid changes apply immediately and autosave. Delay changes use the original check detection time; 0 verifies immediately. Skipped checks stay skipped. A sent request cannot be recalled." });
+        layout.Controls.Add(new Label { Text = "After a manual pick change in League:", AutoSize = true, Margin = new Padding(3, 15, 3, 3) });
+        var policy = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 530,
             AccessibleName = "Deadline behavior after a manual pick change" };
         policy.Items.AddRange(["Lock current hover (default)", "Use my role plan", "Do nothing"]);
         policy.SelectedIndex = (int)plans.Current.ManualPickPolicy;
-        var explanation = new Label { AutoSize = true, MaximumSize = new Size(470, 0) };
-        var health = new Label { AutoSize = true, MaximumSize = new Size(470, 0) };
-        var retry = new Button { Text = "Retry saving policy / plans", AutoSize = true };
-        void RenderPolicy()
+        var explanation = new Label { AutoSize = true, MaximumSize = new Size(540, 0) };
+        policy.SelectedIndexChanged += (_, _) => plans.SetManualPickPolicy((ManualPickPolicy)policy.SelectedIndex);
+        layout.Controls.Add(policy); layout.Controls.Add(explanation);
+        var toggle = new CheckBox { Text = "Show advanced timing", AutoSize = true, Margin = new Padding(3, 15, 3, 3) };
+        var advanced = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown,
+            WrapContents = false, Visible = false };
+        AddField(advanced, TimingField.ActionPacing, "Action pacing (ms, 0–5000):");
+        AddField(advanced, TimingField.HoverLock, "Hover to lock (ms, 0–5000):");
+        AddField(advanced, TimingField.Urgent, "Urgent threshold (ms, 1000–10000):");
+        AddField(advanced, TimingField.MinimumDispatch, "Request safety margin (ms, 250–1000):");
+        advanced.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(530, 0), Text =
+            "Normal actions wait from the original action / hover start. Urgent actions skip pacing and hover waits; the safety margin always prevents dispatch too close to expiry. Urgent time must exceed the safety margin. These are best-effort engineering bounds, not measured League latency guarantees." });
+        toggle.CheckedChanged += (_, _) => advanced.Visible = toggle.Checked;
+        layout.Controls.Add(toggle); layout.Controls.Add(advanced);
+        var reset = new Button { Text = "Restore author timing defaults", AutoSize = true };
+        reset.Click += (_, _) =>
         {
-            explanation.Text = ManualPickPolicies.Explanation(plans.Current.ManualPickPolicy) +
-                "\nPolicy changes apply immediately and autosave. Closing never reverts them. A sent request cannot be recalled.";
-            health.Text = $"Policy / plans revision {plans.Current.Revision}: " + (plans.Health switch
-            {
-                PlanSaveHealth.Saved => $"Saved (revision {plans.SavedRevision})",
-                PlanSaveHealth.SaveFailed => "UNSAVED — save failed; retrying automatically",
-                _ => "UNSAVED — autosave pending"
-            }) + (plans.Recovery is PlanRecovery.Rejected or PlanRecovery.Unavailable
-                ? "\nStored policy / plans could not be recovered. Safe Do nothing policy and empty plans loaded; original file preserved until an edit." : "");
+            plans.ResetTiming(); rendering = true;
+            foreach (var (field, input) in fields) { input.Text = Value(field).ToString(); errors.SetError(input, ""); }
+            rendering = false;
+        };
+        layout.Controls.Add(reset);
+        var health = new Label { AutoSize = true, MaximumSize = new Size(540, 0) };
+        var countdown = new Label { AutoSize = true, MaximumSize = new Size(540, 0) };
+        var retry = new Button { Text = "Retry saving settings / plans", AutoSize = true };
+        retry.Click += async (_, _) => { retry.Enabled = false; await plans.SaveLatestAsync(); };
+        void Render()
+        {
+            explanation.Text = ManualPickPolicies.Explanation(plans.Current.ManualPickPolicy);
+            health.Text = $"Effective settings / plans revision {plans.Current.Revision}; saved revision {plans.SavedRevision}. " +
+                (plans.Health switch { PlanSaveHealth.Saved => "Saved", PlanSaveHealth.SaveFailed => "UNSAVED — save failed; retrying automatically", _ => "UNSAVED — autosave pending" }) +
+                (plans.Recovery is PlanRecovery.Rejected or PlanRecovery.Unavailable ? "\nStored settings / plans could not be recovered. Safe defaults loaded; original file preserved until an edit." : "");
+            countdown.Text = controller.Status + (controller.Remaining is { } remaining ? $" — {remaining.TotalSeconds:0.0}s remaining" : "");
             retry.Enabled = plans.Health != PlanSaveHealth.Saved;
         }
-        policy.SelectedIndexChanged += (_, _) => { plans.SetManualPickPolicy((ManualPickPolicy)policy.SelectedIndex); RenderPolicy(); };
-        retry.Click += async (_, _) => { retry.Enabled = false; await plans.SaveLatestAsync(); if (!IsDisposed) RenderPolicy(); };
-        var timer = new System.Windows.Forms.Timer { Interval = 250 };
-        timer.Tick += (_, _) => RenderPolicy();
-        FormClosed += (_, _) => timer.Dispose();
-        RenderPolicy(); timer.Start();
-        layout.Controls.Add(policy, 0, 3);
-        layout.Controls.Add(explanation, 0, 4);
-        layout.Controls.Add(health, 0, 5);
-        layout.Controls.Add(retry, 0, 6);
-        layout.Controls.Add(buttons, 0, 7);
-        Controls.Add(layout);
-        AcceptButton = save;
-        CancelButton = cancel;
-        cancel.Click += (_, _) => Close();
-        save.Click += (_, _) =>
-        {
-            try
-            {
-                saveSettings(new AcceptDelaySettings(decimal.ToInt32(delay.Value)));
-                Close();
-            }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-            {
-                MessageBox.Show(this,
-                    "The delay could not be saved and has not changed. Check that your local application data folder is writable, then try again.",
-                    "Could not save settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        };
+        layout.Controls.Add(health); layout.Controls.Add(countdown); layout.Controls.Add(retry);
+        var close = new Button { Text = "Close", AutoSize = true }; close.Click += (_, _) => Close();
+        layout.Controls.Add(close); CancelButton = close;
+        var timer = new System.Windows.Forms.Timer { Interval = 100 };
+        timer.Tick += (_, _) => Render(); FormClosed += (_, _) => { timer.Dispose(); errors.Dispose(); };
+        Render(); timer.Start(); Controls.Add(layout);
     }
 }

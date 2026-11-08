@@ -36,7 +36,7 @@ Jungle, Middle, Bottom, or Support. An empty list means no planned action.
 
 **Plan revision**
 
-An immutable snapshot of all role plans and the manual-pick deadline policy
+An immutable snapshot of all role plans, timing settings and the manual-pick deadline policy
 published after one complete valid edit.
 The effective in-memory revision can be newer than the last saved revision.
 

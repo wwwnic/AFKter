@@ -244,6 +244,33 @@ public sealed class PlannedBanTests
         var observer = new DraftObserver(); observer.SetEnabled(true); var generation = observer.BeginSession();
         observer.Observe(generation, 1, null); observer.Observe(generation, 2, DraftObserverTests.Draft()); return observer;
     }
+    // Catches resetting original pacing on an edit, ignoring new settings at verification, and timer-reset revival.
+    [Test]
+    public async Task LiveBanTimingReevaluatesPacingAndNeverRevivesAnExpiredAction()
+    {
+        var clock = new Clock(); var client = new Client { Snapshot = DraftObserverTests.Draft() };
+        var plan = Plan(1) with { Timing = new(3, 5000, 5000, 3000, 250) };
+        var bans = new PlannedBanExecutor(Admitted(), () => plan, true, clock);
+        await bans.RefreshAsync(client, client.Snapshot, default); clock.Advance(2000);
+        await bans.RefreshAsync(client, client.Snapshot, default); Assert.That(client.Writes, Is.Empty);
+        plan = plan with { Revision = 2, Timing = new(3, 0, 0, 3000, 250) };
+        client.Snapshot = client.Snapshot! with { TimeLeftMilliseconds = 0 };
+        await bans.RefreshAsync(client, client.Snapshot, default);
+        client.Snapshot = client.Snapshot! with { TimeLeftMilliseconds = 28000 };
+        await bans.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+    }
+
+    [Test]
+    public async Task FinalReadReevaluatesLiveTimingBeforeBanDispatch()
+    {
+        var client = new Client { Snapshot = DraftObserverTests.Draft(remaining: 2000) }; var plan = Plan(1);
+        client.OnRead = () => plan = plan with { Revision = 2, Timing = new(3, 5000, 5000, 1000, 250) };
+        var bans = new PlannedBanExecutor(Admitted(), () => plan, true, new Clock());
+        await bans.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+    }
+
     internal static RolePlanRevision Plan(params int[] ids) => new(1, RolePlanRevision.Empty.Roles.SetItem(DraftRole.Middle, new([], [..ids])));
     internal sealed class Clock : TimeProvider
     {

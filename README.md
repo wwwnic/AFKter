@@ -92,26 +92,41 @@ conservative skips prevent accepting an ambiguously identified check.
 Disarm or Exit cancels work before dispatch. Once an HTTP accept request has
 been sent, cancellation cannot undo the action in League.
 
-## Delay settings
+## Live settings
 
-Open **Settings…** from the tray menu. Choose a whole number from **0 to 30
-seconds**, then Save. Zero skips the waiting period but still verifies the pending
-check before accepting. A delay longer than the ready check's lifetime will not
-force acceptance after it ends. Cancel or closing the settings window discards
-edits. The window can stay open while the tray monitors League.
+Open **Settings…** from the tray. Enter an accept delay of **0–30 whole
+seconds** (default **3**). Valid edits take effect immediately and autosave;
+there is no Apply, Save or Cancel operation. Closing retains valid edits.
+Unfinished or invalid text displays an error and preserves the effective revision.
+Zero starts verification immediately. A delay longer than the ready check's
+lifetime cannot force acceptance after the check ends.
 
-Each eligible check captures the delay when it is first detected. Saving a new
-delay during a countdown leaves that deadline and its verification threshold
-unchanged; the next eligible check uses the new value. The countdown clears
-when canceled or ended, and when final verification starts, before sending the
-accept request.
+Live edits move an undispatched check's due time from its **original detection**.
+Shortening past elapsed time starts verification; lengthening moves the countdown.
+Duplicate events never restart it. A delay edit during final verification requires
+a fresh read before sending, including when the new due time has already elapsed.
+Skipped checks remain skipped, and an accept attempt is never repeated. The
+countdown clears during verification, in flight, and on cancellation.
 
-Only the delay is saved, at `%LOCALAPPDATA%\AFKtor\settings.json`. Missing,
-unreadable, malformed, or out-of-range settings fall back to 3 seconds. A failed
-save shows an error and keeps the previous effective delay; retry after checking
-folder write access. Saves write a temporary file before replacing the old file.
-Arming and League credentials are never saved. Restarting Afkter always starts
-disarmed, even when a saved delay is restored.
+**Show advanced timing** starts collapsed. Draft pacing and hover-to-lock waits
+support **0–5000 ms** each (defaults **1000 ms**). The urgent threshold supports
+**1000–10000 ms** (default **3000 ms**); the request safety margin supports
+**250–1000 ms** (default **250 ms**) and must be smaller than the urgent threshold.
+Normal work waits from the original action / hover start. Urgency skips avoidable
+waits, while the safety margin always blocks writes too close to expiry.
+**Restore author timing defaults** resets all five timing values in one revision,
+without changing plans or the manual-pick policy. See [timing details](docs/live-timing.md).
+
+All settings share the role-plan immutable revision, serialized autosave and
+visible effective/saved revision, failure and retry status. Storage is now
+`%LOCALAPPDATA%\AFKtor\role-plans.json`. Existing `settings.json` delay preferences
+are read when the revision has no timing member; the first subsequent edit saves
+that migrated delay with the complete revision. New timing takes precedence over
+the retained legacy file. Missing/malformed legacy delay defaults to 3 seconds.
+Malformed new revision files are preserved and visibly rejected as a whole.
+Failed saves leave the latest settings effective and retry automatically; restart
+recovers only the last successful save. Arming and credentials are never saved.
+Afkter always starts disarmed.
 
 ## Connection behavior
 
@@ -175,23 +190,24 @@ On Windows with the installed League Client:
 
 Ticket 03 settings checks:
 
-1. With Afkter closed, back up any existing settings file and remove it. Start
-   Afkter, open Settings, and verify 3 seconds and an unchecked arming item.
-2. Save 5 seconds, exit, and restart. Verify Settings shows 5 and auto-accept is
-   still disarmed. Close with Cancel after editing; reopen and verify 5 remains.
-3. Arm and receive an eligible check. During its 5-second countdown, save 1
-   second. Verify the active countdown keeps its original deadline and the next
-   eligible check waits 1 second. Duplicate events must not reset either deadline.
-4. Verify the countdown clears on decline, expiration, disarm, disconnect, and
-   after the delay while verification or acceptance is in flight.
-5. Select 0 and verify a new eligible check is verified and accepted once without
-   waiting. Checks seen disarmed or already pending on connection remain skipped.
-6. Try 30 seconds and let a check expire sooner: it must cancel without accepting.
-7. Make the settings destination unwritable and try Save. Verify an error, the
-   old effective delay, and the open settings window; restore write access and
-   retry. Restore any backed-up settings afterward.
-8. Reopen Settings repeatedly and verify one window. Exit Afkter while Settings
-   is open, including during a countdown; verify the window and process close.
+1. Back up both storage files. Start with no files; verify delay 3, advanced
+   collapsed, author defaults, and disarmed startup. Restore a legacy delay and
+   old v1 role plans; verify migration preserves delay, priorities and policy.
+2. Enter 5, close/reopen and restart. Verify it persists and startup is disarmed.
+   Enter empty, negative and fractional text; effective revision must not change.
+3. Arm before a check. During its countdown, lengthen to 30, then shorten past
+   elapsed time. Verify original-time countdowns, immediate verification, no
+   duplicate attempts, no revived skipped checks, and compatible timer checks.
+4. Edit while final verification is held; require a fresh read before sending.
+   Confirm decline, expiry, disarm, disconnect and shutdown clear work.
+5. Expand advanced timing; exercise zero/maximum pacing and hover waits, urgent
+   priority, margin boundaries, rejected unsafe combinations and one-revision
+   restore defaults. Check keyboard navigation and normal/high DPI layouts.
+6. Make role-plans.json unwritable, edit and reset. Verify current settings remain
+   effective with UNSAVED failure, then restore access and check automatic and
+   manual retry, reopen/restart, diagnostics agreement and original-file recovery.
+7. Reopen Settings repeatedly: one modeless window. Exit with it open during
+   countdown or verification and confirm the window and process close.
 
 Native WinForms interactions and live League acceptance have **not** been run in
 this Linux environment. The deterministic settings/controller tests and Windows
