@@ -36,6 +36,13 @@ Jungle, Middle, Bottom, or Support. An empty list means no planned action.
 
 **Plan revision**
 
-An immutable snapshot of all role plans published after one complete valid edit.
+An immutable snapshot of all role plans and the manual-pick deadline policy
+published after one complete valid edit.
 The effective in-memory revision can be newer than the last saved revision.
 
+
+**Manual-pick deadline policy**
+
+The player's live setting for automatic pick behavior near expiry after a manual
+hover change: Lock current hover (default), Use my role plan, or Do nothing.
+Changing it never clears manual control for the current draft.

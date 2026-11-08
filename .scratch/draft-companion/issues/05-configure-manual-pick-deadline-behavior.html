@@ -19,6 +19,8 @@
     <dl>
       <dt>Status</dt>
       <dd>ready-for-agent</dd>
+      <dt>Resolution</dt>
+      <dd>Implemented; automated verification passed; native Windows and League acceptance pending. Draft writes remain gated off.</dd>
       <dt>Blocked by</dt>
       <dd><a href="04-hover-and-lock-planned-picks.html">04</a></dd>
     </dl>
@@ -41,6 +43,7 @@
       <h2>Comments</h2>
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Implemented ticket 05 only. Main Settings explains all three policies with immediate revision publication, serial autosave and visible recovery/save/retry health. Live edits retain manual takeover, update held verification and share the dispatch guard; sent requests reconcile before more work. Missing policy in existing v1 plans defaults to Lock current hover; malformed policy safely rejects the revision with Do nothing and a warning. TDD regressions were observed failing before fixes. SDK 10.0.403: 285/285 Release tests passed (255 baseline plus 30); Windows cross-build passed with zero warnings/errors; git diff --check passed. See <a href="../../../docs/planned-picks.md">behavior and evidence</a>. Windows UI/League unavailable; both native gates remain false. Ticket 06 timing and ready-check semantics are untouched. Pausing after this one ticket.</p>
     </section>
   </main>
 </body>

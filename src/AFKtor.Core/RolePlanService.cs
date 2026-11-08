@@ -40,7 +40,20 @@ public sealed class RolePlanService : IAsyncDisposable
             var plan = current.For(role);
             if ((list == PlanList.Picks ? plan.Picks : plan.Bans).SequenceEqual(ids)) return false;
             var replacement = list == PlanList.Picks ? plan with { Picks = [.. ids] } : plan with { Bans = [.. ids] };
-            current = new(current.Revision + 1, current.Roles.SetItem(role, replacement));
+            current = new(current.Revision + 1, current.Roles.SetItem(role, replacement), current.ManualPickPolicy);
+            health = PlanSaveHealth.Unsaved;
+            Observe();
+            return true;
+        }
+    }
+
+    public bool SetManualPickPolicy(ManualPickPolicy policy)
+    {
+        if (!Enum.IsDefined(policy)) return false;
+        lock (gate)
+        {
+            if (disposed || current.Revision == long.MaxValue - 1 || current.ManualPickPolicy == policy) return false;
+            current = current with { Revision = current.Revision + 1, ManualPickPolicy = policy };
             health = PlanSaveHealth.Unsaved;
             Observe();
             return true;
@@ -81,7 +94,7 @@ public sealed class RolePlanService : IAsyncDisposable
         finally { writer.Release(); }
     }
 
-    private void Observe() => diagnostics?.ObserveRolePlans(new(current.Revision, savedRevision, health, Recovery));
+    private void Observe() => diagnostics?.ObserveRolePlans(new(current.Revision, savedRevision, health, Recovery, current.ManualPickPolicy));
 
     private async Task AutosaveAsync()
     {

@@ -1,10 +1,10 @@
-# Planned picks — ticket 04
+# Planned picks — tickets 04–05
 
 Afkter implements ordered pick hover, lock and the default manual-hover watchdog.
 The shipped tray explicitly keeps `nativeSemanticsVerified: false` for both picks
 and bans. It sends **zero draft writes** until installed-client semantics are
 verified. This internal gate is not a player setting. Ready-check acceptance is
-unchanged. Watchdog policy choices and editable timing remain tickets 05 and 06.
+unchanged. Manual deadline policy is configurable in Settings (ticket 05); editable timing remains ticket 06.
 
 The latest effective assigned-role pick plan supplies candidates in order. Before
 each write, the executor reads GET `/lol-champ-select/v1/pickable-champion-ids`
@@ -50,9 +50,26 @@ request races an unresolved request. Edits after request start cannot recall it.
 
 Any observed external hover change pauses normal pick selection for the entire
 draft. Editing a plan never clears that state. Shortly before expiry (the same
-3,000 ms margin), the default watchdog re-reads and locks only the current eligible
-hover, including one outside the plan. An empty, unavailable, banned or already
-picked hover produces `InvalidHover` and no substitution. The next admitted draft
+3,000 ms margin), the configured watchdog policy applies:
+
+- **Lock current hover** (default) re-reads and locks only the current eligible
+  hover, including one outside the plan. An empty, unavailable, banned or already
+  picked hover produces `InvalidHover` and no substitution.
+- **Use my role plan** selects and locks the first currently eligible champion in
+  the latest assigned-role plan, even when replacing the manual hover. Exhaustion
+  produces `Exhausted`, skipped reasons, and no request.
+- **Do nothing** makes no more automatic selections or locks after takeover in
+  that draft. Normal role-plan automation still runs before takeover.
+
+The main **Settings…** dialog explains each choice. Choosing a policy immediately
+publishes a whole immutable revision and autosaves with role plans; there is no
+Apply button. Effective/saved revision, save failure, recovery warning and retry
+are visible there. The existing accept-delay buttons explicitly save or discard
+only the delay; closing the dialog never reverts a policy choice. Policy/plan edits
+never clear manual takeover. Both policy and plan use the same final dispatch gate:
+a newer publication invalidates a queued decision; a policy changed during a held
+verification is evaluated before dispatch. A sent request is irrevocable and must
+be reconciled before another request, regardless of later policy changes. The next admitted draft
 clears takeover. Sampling cannot detect changes that appear and disappear between
 reads, nor prove attribution when a player chooses exactly the dispatched champion;
 ambiguous transport evidence yields conservatively.
@@ -107,3 +124,19 @@ Three cover completion before any write, a different completed champion after an
 own hover, and a matching own completion. They verify no later writes, actual
 champion/action and conservative manual attribution in shared tray state,
 diagnostics state and `draft.pick` history. Native acceptance remains pending.
+
+
+November 8, 2026 ticket 05 verification: **285/285 tests passed** (255 baseline
+plus 30 policy/persistence/diagnostic cases); Release Windows cross-build passed
+with zero warnings/errors. Policy cases cover all choices, live countdown/final-read
+changes, revision-gate rejection, in-flight requests, disarm, exhausted plans,
+invalid policies and v1 reloads. Diagnostics `pick` and `rolePlans` include the
+current `manualPickPolicy` and `policyExplanation`; role-plan evidence updates on
+publication even without a draft. Native gates remain false.
+
+Windows/League acceptance is unavailable on this Linux host. In addition to the
+existing gates, verify keyboard navigation and high-DPI layout of all Settings
+choices/explanations, immediate effective revision and save/failure/retry status,
+closing without saving delay while retaining the policy, reopen/restart, and all
+three live League behaviors including changes during countdown and final reads.
+These native checks are pending; automated simulations are not native evidence.

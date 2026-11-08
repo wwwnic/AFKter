@@ -7,7 +7,11 @@ public enum PickSkipReason { Unavailable, AlreadyBanned, AlreadyPicked }
 public sealed record PickSkip(int ChampionId, PickSkipReason Reason);
 public sealed record PickState(PickStatus Status = PickStatus.Idle, long Generation = 0, long? GameId = null,
     long? ActionId = null, long Revision = 0, int? ChampionId = null, bool Manual = false, bool Lock = false,
-    double? RemainingMilliseconds = null, BanRequestOutcome? Outcome = null, PickSkip[]? Skipped = null, int SkippedCount = 0);
+    double? RemainingMilliseconds = null, BanRequestOutcome? Outcome = null, PickSkip[]? Skipped = null, int SkippedCount = 0,
+    ManualPickPolicy ManualPickPolicy = ManualPickPolicy.LockCurrentHover)
+{
+    public string PolicyExplanation => ManualPickPolicies.Explanation(ManualPickPolicy);
+}
 public interface IPickDraftClient : IDraftClient
 {
     Task<IReadOnlySet<int>> ReadPickableAsync(CancellationToken cancellationToken);
@@ -74,6 +78,7 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
             if (!nativeSemanticsVerified) { Publish(State with { Status = PickStatus.NativeVerificationRequired }); return; }
             if (remaining <= 250) { Publish(State with { Status = PickStatus.Cancelled }); return; }
             if (pending) { Publish(State with { Status = outcome == BanRequestOutcome.Rejected ? PickStatus.Rejected : PickStatus.AwaitingOutcome, Lock = locking }); return; }
+            if (manual && plans().ManualPickPolicy is not (ManualPickPolicy.LockCurrentHover or ManualPickPolicy.UseRolePlan)) return;
             if (manual ? remaining > 3000 : remaining > 3000 && (Elapsed < 1000 || acknowledged > 0 && plans().Revision == dispatchedRevision && Elapsed - hoverStarted < 1000)) return;
 
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, observer.WorkToken);
@@ -103,19 +108,21 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
                 var revision = plans();
                 var skipped = new List<PickSkip>();
                 int? candidate = null;
-                if (manual)
+                if (manual && revision.ManualPickPolicy is not (ManualPickPolicy.LockCurrentHover or ManualPickPolicy.UseRolePlan))
+                { Publish(State with { Status = PickStatus.ManualControl, Manual = true, Revision = revision.Revision }); return; }
+                if (manual && revision.ManualPickPolicy == ManualPickPolicy.LockCurrentHover)
                 {
                     if (remaining > 3000) { Publish(State with { Status = PickStatus.ManualControl, Manual = true }); return; }
                     if (verifiedAction!.ChampionId > 0 && Reason(verifiedAction.ChampionId, available, verified) is null) candidate = verifiedAction.ChampionId;
                 }
-                else foreach (var id in revision.For(admission.Role!.Value).Picks)
+                else if (!manual || remaining <= 3000) foreach (var id in revision.For(admission.Role!.Value).Picks)
                 {
                     if (Reason(id, available, verified) is { } reason) skipped.Add(new(id, reason));
                     else { candidate = id; break; }
                 }
                 var complete = manual || remaining <= 3000 || candidate == acknowledged && acknowledged > 0;
                 if (complete && !manual && remaining > 3000 && Elapsed - hoverStarted < 1000) return;
-                var evidence = State with { Status = candidate is null ? manual ? PickStatus.InvalidHover : PickStatus.Exhausted : PickStatus.Dispatching,
+                var evidence = State with { Status = candidate is null ? manual && revision.ManualPickPolicy == ManualPickPolicy.LockCurrentHover ? PickStatus.InvalidHover : PickStatus.Exhausted : PickStatus.Dispatching,
                     Revision = revision.Revision, ChampionId = candidate, Manual = manual, Lock = complete, RemainingMilliseconds = remaining,
                     Skipped = skipped.Take(8).ToArray(), SkippedCount = skipped.Count };
                 Publish(evidence);
@@ -169,7 +176,7 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
     }
     private void Publish(PickState value)
     {
-        value = value with { Generation = observer.State.Generation };
+        value = value with { Generation = observer.State.Generation, ManualPickPolicy = plans().ManualPickPolicy };
         Volatile.Write(ref state, value); diagnostics?.ObservePick(value);
     }
 }
