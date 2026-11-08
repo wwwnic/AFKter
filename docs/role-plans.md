@@ -7,7 +7,13 @@ to delete it. Each button completes exactly one edit; selecting a role/champion,
 searching, duplicate additions, and invalid moves do not publish revisions.
 There is no drag operation or Apply button. Empty lists mean no planned action.
 
-`RolePlanService.Current` supplies a complete immutable revision to future draft
+`RolePlanService.Current` supplies a complete immutable revision of role plans and
+the manual-pick deadline policy configured in main Settings. Changing that policy
+is one complete live edit, sharing the same publication, autosave and dispatch
+guard as plan changes. It does not clear manual takeover. The policy defaults to
+Lock current hover; Use my role plan and Do nothing are also available.
+
+The service supplies a complete immutable revision to future draft
 consumers. A valid edit replaces the whole revision immediately. Saving runs
 separately, serially, every 500 ms, coalescing rapid edits to a coherent snapshot.
 A successful older save cannot mark a newer edit saved. Same-directory temporary
@@ -21,7 +27,7 @@ and save failure. Failed writes keep the latest revision effective and retry
 automatically; Retry saving requests an immediate retry. On restart the last
 successful complete revision is recovered. Invalid schema, missing/duplicate roles,
 unknown IDs, duplicate priorities, invalid revision numbers, and malformed/oversized
-files are rejected as a whole. Recovery starts with empty plans and a visible
+files are rejected as a whole. Recovery starts with empty plans, a safe Do nothing policy and a visible
 warning; the original file is preserved until the player makes a valid edit.
 Diagnostics `/v1/state` adds `rolePlans` (revision, savedRevision, health, recovery);
 `rolePlans.changed` records the same fixed-shape evidence in existing event history.
@@ -78,3 +84,13 @@ native acceptance complete, on Windows without League:
 These UI steps are pending; cross-compilation and simulations do not establish
 Windows visual behavior or live League readiness. Draft action execution belongs
 to later tickets.
+
+
+The existing schema-version-1 file gains an optional numeric `ManualPickPolicy`
+field. Valid old v1 files without it preserve every role/priority and default to
+Lock current hover. New saves retain schema 1 and write the policy with the same
+whole revision. Explicit null, unknown numeric policy or malformed policy values
+reject the complete revision, preserve the original file and visibly recover to
+Do nothing with empty plans. Failed policy writes keep the latest effective policy
+and retry using the same serialized writer; an older save cannot mark it saved.
+Diagnostics role-plan evidence includes the policy and its player explanation.

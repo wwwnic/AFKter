@@ -284,6 +284,147 @@ public sealed class PlannedPickTests
         Assert.That(diagnostics.GetMemoryHistory().Events.Last(e => e.Code == "draft.pick").Details.Pick, Is.EqualTo(picks.State));
     }
 
+    // Catches the watchdog ignoring policy, replacing invalid hover, or not taking ordered eligible fallback.
+    [TestCase(ManualPickPolicy.LockCurrentHover, 86, 86)]
+    [TestCase(ManualPickPolicy.LockCurrentHover, 99, 0)]
+    [TestCase(ManualPickPolicy.UseRolePlan, 86, 2)]
+    [TestCase(ManualPickPolicy.DoNothing, 86, 0)]
+    [TestCase((ManualPickPolicy)99, 86, 0)]
+    public async Task ManualDeadlineHonorsPolicy(ManualPickPolicy policy, int hover, int expected)
+    {
+        var client = new Client { Snapshot = Snapshot(1500), Available = [2, 86] }; client.Hover(hover);
+        var picks = new PlannedPickExecutor(Observer(), () => Plan(1, 2) with { ManualPickPolicy = policy }, true, new PlannedBanTests.Clock());
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.EqualTo(expected == 0 ? Array.Empty<(long, int, bool)>() : new[] { (11L, expected, true) }));
+        Assert.That(picks.State.Manual, Is.True);
+    }
+
+    // Catches applying Do nothing before any takeover, blocking ordinary role-plan selection.
+    [Test]
+    public async Task DoNothingStillSelectsNormallyBeforeTakeover()
+    {
+        var client = new Client { Snapshot = Snapshot(1500) };
+        var picks = new PlannedPickExecutor(Observer(), () => Plan(1) with { ManualPickPolicy = ManualPickPolicy.DoNothing }, true, new PlannedBanTests.Clock());
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.EqualTo(new[] { (11L, 1, true) }));
+    }
+
+    // Catches capturing policy before final verification, or resetting manual takeover on live edits.
+    [TestCase(ManualPickPolicy.LockCurrentHover, ManualPickPolicy.UseRolePlan, 2)]
+    [TestCase(ManualPickPolicy.UseRolePlan, ManualPickPolicy.LockCurrentHover, 86)]
+    [TestCase(ManualPickPolicy.UseRolePlan, ManualPickPolicy.DoNothing, 0)]
+    public async Task HeldVerificationUsesLatestPolicyAndPlan(ManualPickPolicy before, ManualPickPolicy after, int expected)
+    {
+        var client = new Client { Snapshot = Snapshot(1500) }; client.Hover(86);
+        var plan = Plan(1) with { ManualPickPolicy = before };
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<DraftSnapshot?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.ReadOverride = _ => { entered.TrySetResult(); return release.Task; };
+        var picks = new PlannedPickExecutor(Observer(), () => plan, true, new PlannedBanTests.Clock());
+        var refresh = picks.RefreshAsync(client, client.Snapshot, default);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        plan = Plan(2) with { Revision = 2, ManualPickPolicy = after };
+        release.SetResult(client.Snapshot); await refresh;
+        Assert.That(client.Writes, Is.EqualTo(expected == 0 ? Array.Empty<(long, int, bool)>() : new[] { (11L, expected, true) }));
+        Assert.That(picks.State.Manual, Is.True);
+    }
+
+    // Catches fallback substituting an unconfigured hover when the role plan is exhausted.
+    [Test]
+    public async Task ExhaustedManualRolePlanDoesNotLockHover()
+    {
+        var client = new Client { Snapshot = Snapshot(1500), Available = [86] }; client.Hover(86);
+        var picks = new PlannedPickExecutor(Observer(), () => Plan(1) with { ManualPickPolicy = ManualPickPolicy.UseRolePlan }, true, new PlannedBanTests.Clock());
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+        Assert.That(picks.State.Status, Is.EqualTo(PickStatus.Exhausted));
+    }
+
+    // Catches policy changes resuming normal automation early or clearing the draft-wide takeover latch.
+    [Test]
+    public async Task LiveSwitchFromDoNothingWaitsForDeadlineAndKeepsTakeover()
+    {
+        var clock = new PlannedBanTests.Clock(); var client = new Client(); client.Hover(86);
+        var plan = Plan(1) with { ManualPickPolicy = ManualPickPolicy.DoNothing };
+        var picks = new PlannedPickExecutor(Observer(), () => plan, true, clock);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        clock.Advance(1000);
+        plan = Plan(2) with { Revision = 2, ManualPickPolicy = ManualPickPolicy.UseRolePlan };
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+        clock.Advance(25000);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.EqualTo(new[] { (11L, 2, true) }));
+        Assert.That(picks.State.Manual, Is.True);
+    }
+
+    // Catches using a superseded decision after a policy publishes at the atomic dispatch boundary.
+    [Test]
+    public async Task PolicyEditAtDispatchBoundaryRejectsOldDecisionAndReevaluatesNextPoll()
+    {
+        var client = new Client { Snapshot = Snapshot(1500) }; client.Hover(86);
+        var plan = Plan(1) with { ManualPickPolicy = ManualPickPolicy.UseRolePlan };
+        var picks = new PlannedPickExecutor(Observer(), () => plan, true, new PlannedBanTests.Clock(),
+            startIfCurrent: (revision, start) => { plan = plan with { Revision = 2, ManualPickPolicy = ManualPickPolicy.DoNothing }; return revision == plan.Revision ? start() : null; });
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+        Assert.That(picks.State.Manual, Is.True);
+    }
+
+    // Catches recalling a sent lock or dispatching a second write after live policy edits before reconciliation.
+    [TestCase(ManualPickPolicy.LockCurrentHover)]
+    [TestCase(ManualPickPolicy.UseRolePlan)]
+    [TestCase(ManualPickPolicy.DoNothing)]
+    public async Task SentLockIsIrrevocableAcrossPolicyChanges(ManualPickPolicy after)
+    {
+        var client = new Client { Snapshot = Snapshot(1500) }; client.Hover(86);
+        var plan = Plan(1) with { ManualPickPolicy = ManualPickPolicy.UseRolePlan };
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<BanRequestOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.WriteOverride = _ => { entered.TrySetResult(); return release.Task; };
+        var picks = new PlannedPickExecutor(Observer(), () => plan, true, new PlannedBanTests.Clock());
+        var first = picks.RefreshAsync(client, client.Snapshot, default);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        plan = Plan(2) with { Revision = 2, ManualPickPolicy = after };
+        release.SetResult(BanRequestOutcome.Accepted); await first;
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.EqualTo(new[] { (11L, 1, true) }));
+        client.Hover(1, true); await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(picks.State.Status, Is.EqualTo(PickStatus.Completed));
+        Assert.That(client.Writes, Has.Count.EqualTo(1));
+    }
+
+    // Catches watchdog bypassing disarm on a final read under any policy, including when policy changes live.
+    [TestCase(ManualPickPolicy.LockCurrentHover)]
+    [TestCase(ManualPickPolicy.UseRolePlan)]
+    [TestCase(ManualPickPolicy.DoNothing)]
+    public async Task DisarmCancelsManualDeadlineForEveryPolicy(ManualPickPolicy after)
+    {
+        var observer = Observer(); var client = new Client { Snapshot = Snapshot(1500) }; client.Hover(86);
+        var plan = Plan(1);
+        client.OnRead = () => { plan = plan with { Revision = 2, ManualPickPolicy = after }; observer.SetEnabled(false); };
+        var picks = new PlannedPickExecutor(observer, () => plan, true, new PlannedBanTests.Clock());
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+        Assert.That(picks.State.Status, Is.EqualTo(PickStatus.Cancelled));
+    }
+
+    // Catches diagnostics publishing an obsolete policy or losing its explanation at no-write decisions.
+    [TestCase(ManualPickPolicy.LockCurrentHover)]
+    [TestCase(ManualPickPolicy.UseRolePlan)]
+    [TestCase(ManualPickPolicy.DoNothing)]
+    public async Task ManualPolicyDiagnosticMatchesDecisionAndExplanation(ManualPickPolicy policy)
+    {
+        await using var diagnostics = new AFKtor.Core.Diagnostics.DiagnosticCollector();
+        var client = new Client { Snapshot = Snapshot(1500) }; client.Hover(86);
+        var picks = new PlannedPickExecutor(Observer(), () => Plan(1) with { ManualPickPolicy = policy }, true, new PlannedBanTests.Clock(), diagnostics);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(diagnostics.GetState().Pick!.ManualPickPolicy, Is.EqualTo(policy));
+        Assert.That(diagnostics.GetState().Pick!.PolicyExplanation, Does.Contain(policy == ManualPickPolicy.UseRolePlan ? "replacing" : policy == ManualPickPolicy.DoNothing ? "no further" : "never replaced"));
+        Assert.That(diagnostics.GetMemoryHistory().Events.Last(e => e.Code == "draft.pick").Details.Pick, Is.EqualTo(picks.State));
+    }
+
     internal static RolePlanRevision Plan(params int[] ids) => new(1, RolePlanRevision.Empty.Roles.SetItem(DraftRole.Middle, new([..ids], [])));
     internal static DraftSnapshot Snapshot(long remaining = 28000) => DraftObserverTests.Draft(remaining: remaining) with
     { Actions = [new(11, 2, DraftActionKind.Pick, 0, true, false)] };

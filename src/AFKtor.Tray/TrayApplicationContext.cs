@@ -123,7 +123,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             // A failed save leaves the controller's effective setting unchanged.
             settingsStore.Save(value);
             controller.AcceptDelay = TimeSpan.FromSeconds(value.DelaySeconds);
-        });
+        }, rolePlans);
         settingsForm.FormClosed += (_, _) => settingsForm = null;
         // Modeless so tray interaction, timers and shutdown remain available.
         settingsForm.Show();

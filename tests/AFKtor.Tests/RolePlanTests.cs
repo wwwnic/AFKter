@@ -204,6 +204,100 @@ public sealed class RolePlanTests
         Assert.That(reopened.Current.For(DraftRole.Top).Picks, Is.EqualTo(new[] { 2, 1 }));
     }
 
+    // Catches silently accepting an unknown stored policy and enabling its default watchdog.
+    [Test]
+    public async Task Unknown_stored_policy_rejects_complete_revision_and_preserves_evidence()
+    {
+        using var folder = new TemporaryFolder();
+        await using (var plans = new RolePlanService(new RolePlanFileStore(folder.File), Catalog, startWorker: false))
+        {
+            plans.Replace(DraftRole.Top, PlanList.Picks, [1]);
+            await plans.SaveLatestAsync();
+        }
+        var stored = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(folder.File))!;
+        stored["ManualPickPolicy"] = 99;
+        var json = stored.ToJsonString();
+        File.WriteAllText(folder.File, json);
+        await using var reopened = new RolePlanService(new RolePlanFileStore(folder.File), Catalog, startWorker: false);
+        Assert.That(reopened.Recovery, Is.EqualTo(PlanRecovery.Rejected));
+        Assert.That(reopened.Current.For(DraftRole.Top).Picks, Is.Empty);
+        Assert.That(File.ReadAllText(folder.File), Is.EqualTo(json));
+    }
+
+    // Catches treating explicit malformed/null policy as an absent legacy setting and enabling a watchdog.
+    [TestCase("null")]
+    [TestCase("\"UseRolePlan\"")]
+    [TestCase("1.5")]
+    public async Task Invalid_policy_shape_recovers_safely_and_visibly(string policy)
+    {
+        using var folder = new TemporaryFolder();
+        var json = "{\"SchemaVersion\":1,\"Revision\":0,\"Roles\":[{\"Role\":0,\"Picks\":[],\"Bans\":[]},{\"Role\":1,\"Picks\":[],\"Bans\":[]},{\"Role\":2,\"Picks\":[],\"Bans\":[]},{\"Role\":3,\"Picks\":[],\"Bans\":[]},{\"Role\":4,\"Picks\":[],\"Bans\":[]}],\"ManualPickPolicy\":" + policy + "}";
+        File.WriteAllText(folder.File, json);
+        await using var plans = new RolePlanService(new RolePlanFileStore(folder.File), Catalog, startWorker: false);
+        Assert.That(plans.Recovery, Is.EqualTo(PlanRecovery.Rejected));
+        Assert.That(plans.Current.ManualPickPolicy, Is.EqualTo(ManualPickPolicy.DoNothing));
+        Assert.That(File.ReadAllText(folder.File), Is.EqualTo(json));
+    }
+
+    // Catches dropping live policy from diagnostics, serial persistence or subsequent plan edits.
+    [TestCase(ManualPickPolicy.LockCurrentHover)]
+    [TestCase(ManualPickPolicy.UseRolePlan)]
+    [TestCase(ManualPickPolicy.DoNothing)]
+    public async Task Policy_is_live_immutable_diagnostic_and_saved_with_plans(ManualPickPolicy policy)
+    {
+        using var folder = new TemporaryFolder();
+        await using var collector = new AFKtor.Core.Diagnostics.DiagnosticCollector();
+        await using var plans = new RolePlanService(new RolePlanFileStore(folder.File), Catalog, collector, startWorker: false);
+        var original = plans.Current;
+        plans.SetManualPickPolicy(policy);
+        plans.Replace(DraftRole.Top, PlanList.Picks, [2, 1]);
+        Assert.That(original.ManualPickPolicy, Is.EqualTo(ManualPickPolicy.LockCurrentHover));
+        Assert.That(plans.Current.ManualPickPolicy, Is.EqualTo(policy));
+        var json = System.Text.Json.JsonSerializer.SerializeToElement(collector.GetState().RolePlans);
+        Assert.That(json.TryGetProperty("ManualPickPolicy", out var value), Is.True);
+        Assert.That(value.GetInt32(), Is.EqualTo((int)policy));
+        Assert.That(json.GetProperty("PolicyExplanation").GetString(), Does.Contain(policy == ManualPickPolicy.UseRolePlan ? "replacing" : policy == ManualPickPolicy.DoNothing ? "no further" : "never replaced"));
+        await plans.SaveLatestAsync();
+        await using var reopened = new RolePlanService(new RolePlanFileStore(folder.File), Catalog, startWorker: false);
+        Assert.That(reopened.Current.ManualPickPolicy, Is.EqualTo(policy));
+        Assert.That(reopened.Current.For(DraftRole.Top).Picks, Is.EqualTo(new[] { 2, 1 }));
+    }
+
+    // Catches incompatibility with existing v1 files and silent rejection of old ordered plans.
+    [Test]
+    public async Task V1_plan_without_policy_recovers_ordered_plans_and_default_watchdog()
+    {
+        using var folder = new TemporaryFolder();
+        File.WriteAllText(folder.File, """{"SchemaVersion":1,"Revision":7,"Roles":[{"Role":0,"Picks":[2,1],"Bans":[]},{"Role":1,"Picks":[],"Bans":[]},{"Role":2,"Picks":[],"Bans":[]},{"Role":3,"Picks":[],"Bans":[]},{"Role":4,"Picks":[],"Bans":[]}]}""");
+        await using var plans = new RolePlanService(new RolePlanFileStore(folder.File), Catalog, startWorker: false);
+        Assert.That(plans.Recovery, Is.EqualTo(PlanRecovery.Loaded));
+        Assert.That(plans.Current.Revision, Is.EqualTo(7));
+        Assert.That(plans.Current.ManualPickPolicy, Is.EqualTo(ManualPickPolicy.LockCurrentHover));
+        Assert.That(plans.Current.For(DraftRole.Top).Picks, Is.EqualTo(new[] { 2, 1 }));
+        plans.SetManualPickPolicy(ManualPickPolicy.DoNothing); await plans.SaveLatestAsync();
+        Assert.That(new RolePlanFileStore(folder.File).Load(Catalog).Plan.ManualPickPolicy, Is.EqualTo(ManualPickPolicy.DoNothing));
+    }
+
+    // Catches a failed policy save reverting effective policy or a stale revision starting after a policy edit.
+    [Test]
+    public async Task Policy_edit_invalidates_dispatch_and_failed_save_retries_latest_policy()
+    {
+        using var folder = new TemporaryFolder(); Directory.CreateDirectory(folder.File);
+        await using var plans = new RolePlanService(new RolePlanFileStore(folder.File), Catalog, startWorker: false);
+        var old = plans.Current.Revision;
+        Assert.That(plans.SetManualPickPolicy(ManualPickPolicy.UseRolePlan), Is.True);
+        Assert.That(plans.SetManualPickPolicy((ManualPickPolicy)99), Is.False);
+        var started = false;
+        Assert.That(plans.StartIfCurrent(old, () => { started = true; return Task.FromResult(1); }), Is.Null);
+        Assert.That(started, Is.False);
+        await plans.SaveLatestAsync();
+        Assert.That(plans.Health, Is.EqualTo(PlanSaveHealth.SaveFailed));
+        Assert.That(plans.Current.ManualPickPolicy, Is.EqualTo(ManualPickPolicy.UseRolePlan));
+        plans.SetManualPickPolicy(ManualPickPolicy.DoNothing);
+        Directory.Delete(folder.File); await plans.SaveLatestAsync();
+        Assert.That(new RolePlanFileStore(folder.File).Load(Catalog).Plan.ManualPickPolicy, Is.EqualTo(ManualPickPolicy.DoNothing));
+    }
+
     private sealed class PausedStore(RolePlanFileStore inner) : IRolePlanStore
     {
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);

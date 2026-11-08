@@ -12,7 +12,7 @@ public interface IRolePlanStore
 public sealed class RolePlanFileStore(string path) : IRolePlanStore
 {
     private readonly string file = Path.GetFullPath(path);
-    private sealed record Stored(int SchemaVersion, long Revision, StoredRole[] Roles);
+    private sealed record Stored(int SchemaVersion, long Revision, StoredRole[] Roles, JsonElement ManualPickPolicy = default);
     private sealed record StoredRole(DraftRole Role, int[] Picks, int[] Bans);
 
     public (RolePlanRevision Plan, PlanRecovery Recovery) Load(ChampionCatalog catalog)
@@ -20,20 +20,22 @@ public sealed class RolePlanFileStore(string path) : IRolePlanStore
         try
         {
             if (!File.Exists(file)) return (RolePlanRevision.Empty, PlanRecovery.New);
-            if (!catalog.Available) return (RolePlanRevision.Empty, PlanRecovery.Unavailable);
-            if (new FileInfo(file).Length > 131072) return (RolePlanRevision.Empty, PlanRecovery.Rejected);
+            if (!catalog.Available) return (RolePlanRevision.Empty with { ManualPickPolicy = ManualPickPolicy.DoNothing }, PlanRecovery.Unavailable);
+            if (new FileInfo(file).Length > 131072) return (RolePlanRevision.Empty with { ManualPickPolicy = ManualPickPolicy.DoNothing }, PlanRecovery.Rejected);
             var stored = JsonSerializer.Deserialize<Stored>(System.IO.File.ReadAllText(file));
             if (stored is null || stored.SchemaVersion != 1 || stored.Revision < 0 || stored.Revision == long.MaxValue ||
+                stored.ManualPickPolicy.ValueKind != JsonValueKind.Undefined &&
+                    (stored.ManualPickPolicy.ValueKind != JsonValueKind.Number || !stored.ManualPickPolicy.TryGetInt32(out var policy) || !Enum.IsDefined((ManualPickPolicy)policy)) ||
                 stored.Roles is null || stored.Roles.Length != 5 || stored.Roles.Any(r => r is null) ||
                 stored.Roles.Select(r => r.Role).Distinct().Count() != 5 ||
                 stored.Roles.Any(r => !Enum.IsDefined(r.Role) || !Valid(r.Picks, catalog) || !Valid(r.Bans, catalog)))
-                return (RolePlanRevision.Empty, PlanRecovery.Rejected);
+                return (RolePlanRevision.Empty with { ManualPickPolicy = ManualPickPolicy.DoNothing }, PlanRecovery.Rejected);
             return (new(stored.Revision, stored.Roles.ToImmutableDictionary(r => r.Role,
-                r => new RolePlan([.. r.Picks], [.. r.Bans]))), PlanRecovery.Loaded);
+                r => new RolePlan([.. r.Picks], [.. r.Bans])), stored.ManualPickPolicy.ValueKind == JsonValueKind.Undefined ? ManualPickPolicy.LockCurrentHover : (ManualPickPolicy)stored.ManualPickPolicy.GetInt32()), PlanRecovery.Loaded);
         }
-        catch (JsonException) { return (RolePlanRevision.Empty, PlanRecovery.Rejected); }
+        catch (JsonException) { return (RolePlanRevision.Empty with { ManualPickPolicy = ManualPickPolicy.DoNothing }, PlanRecovery.Rejected); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        { return (RolePlanRevision.Empty, PlanRecovery.Unavailable); }
+        { return (RolePlanRevision.Empty with { ManualPickPolicy = ManualPickPolicy.DoNothing }, PlanRecovery.Unavailable); }
     }
 
     internal static bool Valid(int[]? ids, ChampionCatalog catalog) => ids is not null && ids.Length <= 1000 &&
@@ -49,7 +51,7 @@ public sealed class RolePlanFileStore(string path) : IRolePlanStore
             using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 JsonSerializer.Serialize(stream, new Stored(1, revision.Revision,
-                    revision.Roles.OrderBy(r => r.Key).Select(r => new StoredRole(r.Key, r.Value.Picks.ToArray(), r.Value.Bans.ToArray())).ToArray()));
+                    revision.Roles.OrderBy(r => r.Key).Select(r => new StoredRole(r.Key, r.Value.Picks.ToArray(), r.Value.Bans.ToArray())).ToArray(), JsonSerializer.SerializeToElement(revision.ManualPickPolicy)));
                 stream.Flush(flushToDisk: true);
             }
             File.Move(temporary, file, overwrite: true);
