@@ -19,6 +19,8 @@
     <dl>
       <dt>Status</dt>
       <dd>ready-for-agent</dd>
+      <dt>Resolution</dt>
+      <dd>implemented; native Windows acceptance pending</dd>
       <dt>Blocked by</dt>
       <dd>None</dd>
     </dl>
@@ -41,6 +43,9 @@
       <h2>Comments</h2>
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Implemented on isolated <code>feature/role-plans</code> based on <code>feature/draft-companion</code>. Added a modest modeless native editor for all five roles, champion name/ID search, ordered add/remove/Up/Down commands, valid empty plans, immutable whole revisions, serial asynchronous autosave and automatic/manual retry. There is no Apply button or unfinished drag state. Riot Data Dragon 16.22.1 identities are bundled for offline editing; updates ship with releases and an unavailable catalog disables edits while preserving storage. UI and existing diagnostics expose effective/saved revisions, persistence health and recovery. Invalid stored data is rejected as a whole, never partially imported.</p>
+      <p>Verification: NUnit covers immutable/rapid edits, all roles, empty plans, invalid input, real write failure, retry, restart recovery, malformed/unknown stored data, catalog identities, diagnostics, and edits during a blocked save. Full-suite and Release cross-build results are recorded in the implementation handoff. Native Windows execution is unavailable here; editor rendering/keyboard/DPI, reopen, real Windows permission failure, and UI/diagnostic agreement remain explicit manual gates in <a href="../../../docs/role-plans.md">role-plan verification</a>. This ticket does not enable draft actions or claim live League acceptance. Status keeps the canonical triage label; Resolution records implementation separately.</p>
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Automated evidence: <code>dotnet test tests/AFKtor.Tests --no-restore</code> passed 167/167 tests (16 role-plan cases); <code>dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true</code> passed with zero warnings/errors. SDK 10.0.403 used from <code>/workspace/.dotnet</code>. Native Windows checks remain pending as described above.</p>
     </section>
   </main>
 </body>

@@ -24,7 +24,7 @@ public readonly record struct DiagnosticObservation(DiagnosticCode Code, Connect
     long Generation = 0, DiagnosticReason Reason = DiagnosticReason.None);
 public sealed record DiagnosticDetails(ConnectionStage Stage, long Generation, DiagnosticReason Reason,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
-    ControllerDiagnosticEvidence? Controller = null, DraftState? Draft = null);
+    ControllerDiagnosticEvidence? Controller = null, RolePlanDiagnosticState? RolePlans = null, DraftState? Draft = null);
 public sealed record DiagnosticEvent(int SchemaVersion, Guid RunId, string Build, long Sequence,
     DateTimeOffset Timestamp, double ElapsedMilliseconds, string Code, string Severity, string Source,
     DiagnosticDetails Details, bool Truncated = false);
@@ -37,7 +37,7 @@ public sealed record DiagnosticHealth(string Api, string Discovery, string Stora
 public sealed record DiagnosticState(int SchemaVersion, Guid RunId, string Build, DateTimeOffset StartedAt,
     DateTimeOffset SnapshotAt, long SequenceWatermark, ConnectionDiagnosticState Connection,
     ReadyCheckDiagnosticState ReadyCheck, ArmingDiagnosticState Arming,
-    DelayDiagnosticState Settings, OperationDiagnosticState Operation, DiagnosticHealth Health, DraftState? Draft = null);
+    DelayDiagnosticState Settings, OperationDiagnosticState Operation, DiagnosticHealth Health, RolePlanDiagnosticState? RolePlans = null, DraftState? Draft = null);
 public sealed record DiagnosticRun(int SchemaVersion, Guid RunId, string Build, DateTimeOffset StartedAt,
     bool IsCurrent, string Persistence);
 public sealed record DiagnosticEventPage(int SchemaVersion, Guid RunId, DiagnosticEvent[] Events,
@@ -106,3 +106,5 @@ public sealed record ControllerDiagnosticEvidence(long Revision, DateTimeOffset 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] double? RequiredTimer = null, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] double? LatencyMilliseconds = null, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? HttpStatus = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] AcceptFailureCategory Failure = AcceptFailureCategory.None,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AcceptOperationStage? EventStage = null, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AcceptRequestOutcome? EventOutcome = null);
+
+public sealed record RolePlanDiagnosticState(long Revision, long SavedRevision, PlanSaveHealth Health, PlanRecovery Recovery);

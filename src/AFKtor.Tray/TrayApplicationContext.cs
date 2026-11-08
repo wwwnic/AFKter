@@ -22,6 +22,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly ToolStripMenuItem arm = new("Arm auto-accept") { CheckOnClick = true };
     private readonly ToolStripMenuItem settings = new("Settings…");
     private SettingsForm? settingsForm;
+    private readonly ChampionCatalog championCatalog = ChampionCatalog.LoadBundled();
+    private readonly RolePlanService rolePlans;
+    private readonly ToolStripMenuItem planMenu = new("Role plans…");
+    private RolePlansForm? rolePlansForm;
     private readonly ContextMenuStrip menu = new();
     private readonly NotifyIcon icon;
     private readonly System.Windows.Forms.Timer discoveryTimer = new() { Interval = 2000 };
@@ -30,6 +34,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     public TrayApplicationContext()
     {
+        rolePlans = new RolePlanService(new RolePlanFileStore(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "role-plans.json")),
+            championCatalog, diagnostics.Collector);
         controller = new ReadyCheckController(diagnostics: diagnostics.Collector);
         controller.AcceptDelay = TimeSpan.FromSeconds(settingsStore.Load().DelaySeconds);
         // LCU's self-signed certificate is trusted only by this loopback handler.
@@ -60,6 +67,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         menu.Items.Add(arm);
         settings.Click += (_, _) => ShowSettings();
         menu.Items.Add(settings);
+        planMenu.Click += (_, _) => ShowRolePlans();
+        menu.Items.Add(planMenu);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, async (_, _) => await StopAsync());
         icon = new NotifyIcon
@@ -80,6 +89,15 @@ internal sealed class TrayApplicationContext : ApplicationContext
         displayTimer.Tick += (_, _) => RenderStatus();
         discoveryTimer.Start();
         displayTimer.Start();
+    }
+
+    private void ShowRolePlans()
+    {
+        if (stopping.IsCancellationRequested) return;
+        if (rolePlansForm is not null) { rolePlansForm.Activate(); return; }
+        rolePlansForm = new RolePlansForm(rolePlans, championCatalog);
+        rolePlansForm.FormClosed += (_, _) => rolePlansForm = null;
+        rolePlansForm.Show();
     }
 
     private void ShowSettings()
@@ -135,12 +153,15 @@ internal sealed class TrayApplicationContext : ApplicationContext
         displayTimer.Stop();
         arm.Enabled = false;
         settings.Enabled = false;
+        planMenu.Enabled = false;
+        rolePlansForm?.Close();
         settingsForm?.Close();
         stopping.Cancel();
         icon.Visible = false;
         // Stop invalidates the controller immediately, then drains HTTP/event work.
         await Task.WhenAll(monitor.StopAsync(), draftMonitor.StopAsync());
         await refresh;
+        await rolePlans.DisposeAsync();
         ExitThread();
     }
 
@@ -152,6 +173,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
             discoveryTimer.Dispose();
             displayTimer.Dispose();
             settingsForm?.Dispose();
+            rolePlansForm?.Dispose();
+            rolePlans.DisposeAsync().AsTask().GetAwaiter().GetResult();
             // Core teardown never captures the UI context, including on OS exit.
             monitor.DisposeAsync().AsTask().GetAwaiter().GetResult();
             draftMonitor.DisposeAsync().AsTask().GetAwaiter().GetResult();

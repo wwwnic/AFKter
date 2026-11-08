@@ -208,3 +208,6 @@ The tray app starts a read-only, token-authenticated loopback service automatica
 See [the V1 discovery and query contract](docs/agent-diagnostics.md) for agent examples,
 bounds, test coverage, and native checks. Framework-dependent Windows installs now
 require ASP.NET Core 10 Runtime alongside .NET 10 Desktop Runtime.
+
+Role-plan editing and autosave, champion catalog provenance, recovery behavior,
+and pending native acceptance steps are documented in [Role plans](docs/role-plans.md).

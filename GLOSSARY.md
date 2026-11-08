@@ -28,3 +28,14 @@ no draft actions. Enabling or reconnecting during a draft does not admit that dr
 **Assigned role**
 The local player's position supplied by League: top, jungle, middle, bottom or utility.
 An absent or unknown value is never guessed.
+
+**Role plan**
+
+The player's ordered pick and ban priorities for one assigned draft role: Top,
+Jungle, Middle, Bottom, or Support. An empty list means no planned action.
+
+**Plan revision**
+
+An immutable snapshot of all role plans published after one complete valid edit.
+The effective in-memory revision can be newer than the last saved revision.
+
