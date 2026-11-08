@@ -10,6 +10,8 @@ admission in the tray and diagnostics. See [observer behavior, API evidence and
 remaining native checks](docs/draft-observer.md). The planned-ban pipeline is implemented,
 with an explicit shipped gate that keeps draft writes disabled pending installed-client
 verification. See [ban behavior and readiness evidence](docs/planned-bans.md).
+Planned pick hover/lock and the default manual-hover deadline watchdog are also
+implemented behind the same closed gate; see [pick behavior and native checks](docs/planned-picks.md).
 
 The app name is **Afkter**. Existing `AFKtor.*` project, assembly, and namespace
 identifiers and the `X-AFKtor-Run-Id` diagnostics header remain unchanged. Saved
