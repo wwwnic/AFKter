@@ -298,7 +298,7 @@ lifecycle. `arming` contains `armed`; `settings` contains effective `delaySecond
 These settings are controller-effective values, not evidence of a successful save.
 
 `operation` contains its own `generation`, `checkId`, nullable `attemptId`, `stage`
-(`none`, `waiting`, `verifying`, `dispatched`, `finished`), captured delay in
+(`none`, `waiting`, `verifying`, `dispatched`, `finished`), effective scheduled delay (legacy field name `capturedDelaySeconds`) in
 seconds, `deadline`, nullable `remainingSeconds`, and `outcome`. A finished
 operation can refer to the preceding check, so always use its own IDs. Remaining
 time exists only while waiting and is decreased by the collector's monotonic
@@ -330,12 +330,12 @@ Stable controller codes and how to interpret them:
 
 | Codes | Evidence |
 | --- | --- |
-| `arming.changed`, `delay.changed` | `previousArmed` / `previousDelaySeconds` and new effective source group; an active operation keeps its captured delay and deadline |
+| `arming.changed`, `delay.changed` | `previousArmed` / `previousDelaySeconds` and new effective source group; an undispatched operation moves its deadline from original detection; edits during verification force a fresh read |
 | `readyCheck.sessionStarted`, `readyCheck.baseline` | Connection generation and initial-baseline establishment |
 | `readyCheck.detected`, `readyCheck.initialSkipped`, `readyCheck.disarmedSkipped` | Local check identity and each applicable initial/disarmed skip reason |
 | `readyCheck.observed`, `readyCheck.timerBackwards`, `readyCheck.staleUpdate` | Safe observed fields, conservative backwards-timer suppression, or rejected source generation |
 | `readyCheck.duplicates` | Count and first/last times of repeated identical current updates |
-| `accept.scheduled`, `accept.verifying` | Attempt identity, captured delay/deadline, and operation stage |
+| `accept.scheduled`, `accept.verifying` | Attempt identity, effective delay/deadline, and operation stage; rescheduling retains the attempt identity |
 | `accept.verification` | `initialTimer`, `lastTimer`, `returnedTimer`, `localElapsedSeconds`, `requiredTimer`, and every failed condition |
 | `accept.cancelled` | Fixed cancellation cause and stage/outcome at cancellation |
 | `accept.dispatched`, `accept.completed`, `accept.failed`, `accept.finished` | Dispatch boundary, HTTP result/status when known, latency, failure category, and uncertainty |
@@ -383,3 +383,15 @@ loopback host with simulated League behavior and a controllable clock. It also
 roundtrips controller records through generic history recovery and exercises
 throwing/hung/saturated/contended diagnostics. This establishes neither native
 Windows tray behavior nor installed League behavior; those remain manual checks.
+
+
+Ticket 06 extends `rolePlans` / `rolePlans.changed` with `timing`: accept delay
+seconds, action pacing, hover-lock, urgent threshold and minimum dispatch budget
+in milliseconds. This shares the effective/saved revision and save health; no raw
+settings file is emitted. `ban.remainingMilliseconds` now reports the conservative
+monotonic action budget alongside pick budget. Ready-check `capturedDelaySeconds`
+is retained for API compatibility but now reflects the latest undispatched delay.
+A delay edit retains generation/check/attempt identity, updates deadline and
+remaining time, and can emit another `accept.scheduled` for that same attempt.
+A held read superseded by a delay edit cannot dispatch; a new verification must
+run from the original detection timer. Sent attempts remain irrevocable.

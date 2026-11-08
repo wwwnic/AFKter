@@ -31,7 +31,7 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
     private long detected, dispatchedRevision;
     private double deadline, hoverStarted;
     private int acknowledged, expected;
-    private bool manual, pending, locking;
+    private bool manual, pending, locking, completedAction;
     private BanRequestOutcome? outcome;
     public PickState State => Volatile.Read(ref state);
     public void ObserveCancellation() => Publish(State with { Status = PickStatus.Cancelled });
@@ -48,7 +48,8 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
             { Publish(State with { Status = PickStatus.Cancelled }); return; }
             var identity = (admission.Generation, snapshot.GameId);
             if (draft != identity)
-            { draft = identity; actionId = null; manual = pending = locking = false; acknowledged = expected = 0; outcome = null; }
+            { draft = identity; actionId = null; manual = pending = locking = completedAction = false; acknowledged = expected = 0; outcome = null; }
+            if (completedAction) return; // Confirmed completion is terminal even if a later observation regresses.
             var localPicks = snapshot.Actions.Where(a => a.ActorCellId == snapshot.LocalCellId && a.Kind == DraftActionKind.Pick).ToArray();
             if (localPicks.FirstOrDefault(a => a.Completed) is { } completed)
             {
@@ -56,6 +57,7 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
                     (pending && outcome == BanRequestOutcome.Accepted && expected == completed.ChampionId ||
                      acknowledged == completed.ChampionId);
                 manual |= !ownSelection;
+                completedAction = true;
                 pending = false; acknowledged = completed.ChampionId; actionId = completed.Id;
                 Publish(new(PickStatus.Completed, admission.Generation, snapshot.GameId, completed.Id,
                     plans().Revision, completed.ChampionId, manual, Lock: true, Outcome: outcome));
@@ -76,10 +78,12 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
             Publish(new(manual ? PickStatus.ManualControl : PickStatus.Pacing, admission.Generation, snapshot.GameId,
                 active.Id, plans().Revision, pending ? expected : active.ChampionId > 0 ? active.ChampionId : null, manual, RemainingMilliseconds: remaining, Outcome: outcome));
             if (!nativeSemanticsVerified) { Publish(State with { Status = PickStatus.NativeVerificationRequired }); return; }
-            if (remaining <= 250) { Publish(State with { Status = PickStatus.Cancelled }); return; }
+            if (remaining <= plans().Timing.MinimumDispatchMilliseconds) { Publish(State with { Status = PickStatus.Cancelled }); return; }
             if (pending) { Publish(State with { Status = outcome == BanRequestOutcome.Rejected ? PickStatus.Rejected : PickStatus.AwaitingOutcome, Lock = locking }); return; }
             if (manual && plans().ManualPickPolicy is not (ManualPickPolicy.LockCurrentHover or ManualPickPolicy.UseRolePlan)) return;
-            if (manual ? remaining > 3000 : remaining > 3000 && (Elapsed < 1000 || acknowledged > 0 && plans().Revision == dispatchedRevision && Elapsed - hoverStarted < 1000)) return;
+            var timing = plans().Timing;
+            if (manual ? remaining > timing.UrgentMilliseconds : remaining > timing.UrgentMilliseconds &&
+                (Elapsed < timing.ActionPacingMilliseconds || acknowledged > 0 && plans().Revision == dispatchedRevision && Elapsed - hoverStarted < timing.HoverLockMilliseconds)) return;
 
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, observer.WorkToken);
             var epoch = observer.ArmingEpoch;
@@ -101,27 +105,29 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
                 // Every valid same-action observation constrains future polls, even when this pass cannot dispatch.
                 deadline = Math.Min(deadline, Elapsed + verified.TimeLeftMilliseconds - clock.GetElapsedTime(verificationStarted).TotalMilliseconds);
                 remaining = Remaining(verified);
-                if (remaining <= 250)
+                var revision = plans();
+                timing = revision.Timing;
+                if (remaining <= timing.MinimumDispatchMilliseconds)
                 { Publish(State with { Status = PickStatus.Cancelled, RemainingMilliseconds = remaining }); return; }
                 Reconcile(verifiedAction!);
                 if (pending) return;
-                var revision = plans();
+                if (remaining > timing.UrgentMilliseconds && (manual || Elapsed < timing.ActionPacingMilliseconds)) return;
                 var skipped = new List<PickSkip>();
                 int? candidate = null;
                 if (manual && revision.ManualPickPolicy is not (ManualPickPolicy.LockCurrentHover or ManualPickPolicy.UseRolePlan))
                 { Publish(State with { Status = PickStatus.ManualControl, Manual = true, Revision = revision.Revision }); return; }
                 if (manual && revision.ManualPickPolicy == ManualPickPolicy.LockCurrentHover)
                 {
-                    if (remaining > 3000) { Publish(State with { Status = PickStatus.ManualControl, Manual = true }); return; }
+                    if (remaining > timing.UrgentMilliseconds) { Publish(State with { Status = PickStatus.ManualControl, Manual = true }); return; }
                     if (verifiedAction!.ChampionId > 0 && Reason(verifiedAction.ChampionId, available, verified) is null) candidate = verifiedAction.ChampionId;
                 }
-                else if (!manual || remaining <= 3000) foreach (var id in revision.For(admission.Role!.Value).Picks)
+                else if (!manual || remaining <= timing.UrgentMilliseconds) foreach (var id in revision.For(admission.Role!.Value).Picks)
                 {
                     if (Reason(id, available, verified) is { } reason) skipped.Add(new(id, reason));
                     else { candidate = id; break; }
                 }
-                var complete = manual || remaining <= 3000 || candidate == acknowledged && acknowledged > 0;
-                if (complete && !manual && remaining > 3000 && Elapsed - hoverStarted < 1000) return;
+                var complete = manual || remaining <= timing.UrgentMilliseconds || candidate == acknowledged && acknowledged > 0;
+                if (complete && !manual && remaining > timing.UrgentMilliseconds && Elapsed - hoverStarted < timing.HoverLockMilliseconds) return;
                 var evidence = State with { Status = candidate is null ? manual && revision.ManualPickPolicy == ManualPickPolicy.LockCurrentHover ? PickStatus.InvalidHover : PickStatus.Exhausted : PickStatus.Dispatching,
                     Revision = revision.Revision, ChampionId = candidate, Manual = manual, Lock = complete, RemainingMilliseconds = remaining,
                     Skipped = skipped.Take(8).ToArray(), SkippedCount = skipped.Count };

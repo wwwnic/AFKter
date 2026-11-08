@@ -108,7 +108,7 @@ public sealed record ControllerDiagnosticEvidence(long Revision, DateTimeOffset 
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AcceptOperationStage? EventStage = null, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AcceptRequestOutcome? EventOutcome = null);
 
 public sealed record RolePlanDiagnosticState(long Revision, long SavedRevision, PlanSaveHealth Health, PlanRecovery Recovery,
-    ManualPickPolicy ManualPickPolicy = ManualPickPolicy.LockCurrentHover)
+    ManualPickPolicy ManualPickPolicy = ManualPickPolicy.LockCurrentHover, TimingSettings? Timing = null)
 {
     public string PolicyExplanation => ManualPickPolicies.Explanation(ManualPickPolicy);
 }

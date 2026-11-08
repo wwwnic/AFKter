@@ -7,7 +7,7 @@ public enum BanRequestOutcome { Accepted, Rejected, Ambiguous }
 public enum BanSkipReason { Unavailable, AlreadyBanned, TeammateIntent }
 public sealed record BanSkip(int ChampionId, BanSkipReason Reason);
 public sealed record BanState(BanStatus Status = BanStatus.Idle, long? GameId = null, long? ActionId = null,
-    long Revision = 0, int? ChampionId = null, BanRequestOutcome? Outcome = null, BanSkip[]? Skipped = null, int SkippedCount = 0, long Generation = 0);
+    long Revision = 0, int? ChampionId = null, BanRequestOutcome? Outcome = null, BanSkip[]? Skipped = null, int SkippedCount = 0, long Generation = 0, double? RemainingMilliseconds = null);
 public interface IBanDraftClient : IDraftClient
 {
     Task<IReadOnlySet<int>> ReadBannableAsync(CancellationToken cancellationToken);
@@ -25,6 +25,8 @@ public sealed class PlannedBanExecutor(DraftObserver observer, Func<RolePlanRevi
     private (long Generation, long Game)? draft;
     private long? actionId;
     private long detected;
+    private double deadline;
+    private double Elapsed => clock.GetElapsedTime(detected).TotalMilliseconds;
     private bool manual, sent;
     private int? expected;
     public BanState State => Volatile.Read(ref state);
@@ -55,14 +57,17 @@ public sealed class PlannedBanExecutor(DraftObserver observer, Func<RolePlanRevi
             if (active is null) { if (!sent) Publish(new(BanStatus.Idle, snapshot.GameId)); return; }
             if (actionId != active.Id)
             {
-                actionId = active.Id; detected = clock.GetTimestamp(); sent = false; expected = null;
+                actionId = active.Id; detected = clock.GetTimestamp(); deadline = snapshot.TimeLeftMilliseconds; sent = false; expected = null;
             }
+            deadline = Math.Min(deadline, Elapsed + snapshot.TimeLeftMilliseconds);
+            var remaining = Math.Min(deadline - Elapsed, snapshot.TimeLeftMilliseconds);
+            var timing = plans().Timing;
             if (sent) return; // Accepted, ambiguous and rejected requests all require observation; never blindly resend.
             if (!nativeSemanticsVerified)
-            { Publish(new(BanStatus.NativeVerificationRequired, snapshot.GameId, actionId)); return; }
-            if (snapshot.TimeLeftMilliseconds <= 250) { Publish(new(BanStatus.Cancelled, snapshot.GameId, actionId)); return; }
-            if (snapshot.TimeLeftMilliseconds > 3000 && clock.GetElapsedTime(detected).TotalMilliseconds < 1000)
-            { Publish(new(BanStatus.Pacing, snapshot.GameId, actionId)); return; }
+            { Publish(new(BanStatus.NativeVerificationRequired, snapshot.GameId, actionId, plans().Revision, RemainingMilliseconds: remaining)); return; }
+            if (remaining <= timing.MinimumDispatchMilliseconds) { Publish(new(BanStatus.Cancelled, snapshot.GameId, actionId, plans().Revision, RemainingMilliseconds: remaining)); return; }
+            if (remaining > timing.UrgentMilliseconds && Elapsed < timing.ActionPacingMilliseconds)
+            { Publish(new(BanStatus.Pacing, snapshot.GameId, actionId, plans().Revision, RemainingMilliseconds: remaining)); return; }
 
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, observer.WorkToken);
             var epoch = observer.ArmingEpoch;
@@ -78,12 +83,18 @@ public sealed class PlannedBanExecutor(DraftObserver observer, Func<RolePlanRevi
                     verified.GameId != snapshot.GameId || verified.QueueId != 400 || verified.Custom || verified.Spectating || verified.Infinite ||
                     verified.LocalCellId != snapshot.LocalCellId || LocalBan(verified)?.Id != active.Id ||
                     verified.Players.Count(p => p.CellId == verified.LocalCellId) != 1 ||
-                    verified.Players.Single(p => p.CellId == verified.LocalCellId).Role != admission.Role ||
-                    verified.TimeLeftMilliseconds - clock.GetElapsedTime(verificationStarted).TotalMilliseconds <= 250)
-                { Publish(new(BanStatus.Cancelled, snapshot.GameId, actionId)); return; }
+                    verified.Players.Single(p => p.CellId == verified.LocalCellId).Role != admission.Role)
+                { Publish(new(BanStatus.Cancelled, snapshot.GameId, actionId, plans().Revision, RemainingMilliseconds: remaining)); return; }
+                // Keep every valid same-action timer constraint, including no-dispatch/expiry exits.
+                deadline = Math.Min(deadline, Elapsed + verified.TimeLeftMilliseconds - clock.GetElapsedTime(verificationStarted).TotalMilliseconds);
+                remaining = Math.Min(deadline - Elapsed, verified.TimeLeftMilliseconds);
+                var revision = plans(); timing = revision.Timing;
+                if (remaining <= timing.MinimumDispatchMilliseconds)
+                { Publish(new(BanStatus.Cancelled, snapshot.GameId, actionId, plans().Revision, RemainingMilliseconds: remaining)); return; }
+                if (remaining > timing.UrgentMilliseconds && Elapsed < timing.ActionPacingMilliseconds)
+                { Publish(new(BanStatus.Pacing, snapshot.GameId, actionId, plans().Revision, RemainingMilliseconds: remaining)); return; }
                 if (verified.Actions.Any(a => a.ActorCellId == verified.LocalCellId && a.Kind == DraftActionKind.Ban && a.ChampionId > 0))
                 { manual = true; Publish(new(BanStatus.ManualControl, snapshot.GameId, actionId)); return; }
-                var revision = plans();
                 var skipped = new List<BanSkip>();
                 int? candidate = null;
                 foreach (var id in revision.For(admission.Role!.Value).Bans)
@@ -95,7 +106,7 @@ public sealed class PlannedBanExecutor(DraftObserver observer, Func<RolePlanRevi
                     else { candidate = id; break; }
                 }
                 var evidence = new BanState(candidate is null ? BanStatus.Exhausted : BanStatus.Dispatching,
-                    snapshot.GameId, active.Id, revision.Revision, candidate, Skipped: skipped.Take(8).ToArray(), SkippedCount: skipped.Count);
+                    snapshot.GameId, active.Id, revision.Revision, candidate, Skipped: skipped.Take(8).ToArray(), SkippedCount: skipped.Count, RemainingMilliseconds: remaining);
                 Publish(evidence);
                 if (candidate is null) return;
                 // No await between the latest in-memory revision/eligibility decision and dispatch.

@@ -36,7 +36,7 @@ public sealed class ReadyCheckController(
 
     public bool IsArmed { get { lock (gate) { return armed; } } }
     public string Status { get { lock (gate) { return status; } } }
-    /// <summary>Changes apply only to ready checks detected after the edit.</summary>
+    /// <summary>Live edits move undispatched work from its original detection time.</summary>
     public TimeSpan AcceptDelay
     {
         get { lock (gate) { return acceptDelay; } }
@@ -52,7 +52,18 @@ public sealed class ReadyCheckController(
             {
                 ObjectDisposedException.ThrowIf(disposed, this);
                 var previous = acceptDelay.TotalSeconds;
+                if (acceptDelay == value) return;
                 acceptDelay = value;
+                if (pending is { DispatchedAt: null } operation)
+                {
+                    operation.ScheduleRevision++;
+                    operation.Delay = value;
+                    operation.Deadline = operation.DetectedAt + value;
+                    operationState = Describe(operation);
+                    var changed = operation.Changed;
+                    operation.Changed = new();
+                    changed.TrySetResult();
+                }
                 Emit(ControllerDecision.DelayChanged, previousDelay: previous);
             }
         }
@@ -158,7 +169,7 @@ public sealed class ReadyCheckController(
                 if (!armed) Emit(ControllerDecision.DisarmedSkipped);
                 return;
             }
-            var operation = new PendingAccept(session, client, clockNow() + acceptDelay, snapshot.ElapsedSeconds, acceptDelay)
+            var operation = new PendingAccept(session, client, clockNow(), snapshot.ElapsedSeconds, acceptDelay)
             { AttemptId = ++nextAttempt, CheckId = checkId };
             pending = operation;
             operationState = Describe(operation);
@@ -174,52 +185,93 @@ public sealed class ReadyCheckController(
         var token = operation.Cancellation.Token;
         try
         {
-            await delayAsync(operation.Delay, token).ConfigureAwait(false);
-            double minimumElapsed;
-            lock (gate)
+            bool initialWait = true;
+            while (true)
             {
-                if (!IsCurrent(operation)) { return; }
-                operation.IsWaiting = false;
-                operation.Stage = AcceptOperationStage.Verifying;
-                operationState = Describe(operation);
-                status = "Verifying ready check";
-                minimumElapsed = operation.InitialElapsedSeconds +
-                    operation.Delay.TotalSeconds + Math.Max(0, (clockNow() - operation.Deadline).TotalSeconds);
-                Emit(ControllerDecision.Verifying, operation);
-            }
-            var snapshot = await operation.Client.ReadAsync(token).ConfigureAwait(false);
-            Task<int?> accepting;
-            lock (gate)
-            {
-                var failures = EligibilityFailure.None;
-                if (!IsCurrent(operation)) failures |= EligibilityFailure.StaleOperation;
-                if (!snapshot.IsPending) failures |= EligibilityFailure.NotPending;
-                // Compare only the operation's own session timer, never a replacement session's timer.
-                var last = ReferenceEquals(pending, operation) ? lastElapsed : operation.LastElapsed;
-                if (snapshot.ElapsedSeconds < last) failures |= EligibilityFailure.TimerBackwards;
-                if (snapshot.ElapsedSeconds < minimumElapsed) failures |= EligibilityFailure.InsufficientTimer;
-                Emit(ControllerDecision.Verification, operation, failures: failures, lastTimer: last,
-                    returnedTimer: snapshot.ElapsedSeconds, requiredTimer: minimumElapsed);
-                if (failures != EligibilityFailure.None)
+                Task changed; TimeSpan wait;
+                lock (gate)
                 {
-                    if (IsCurrent(operation)) status = "Check no longer eligible — accept manually";
-                    return;
+                    if (!IsCurrent(operation)) return;
+                    operation.IsWaiting = true;
+                    operation.Stage = AcceptOperationStage.Waiting;
+                    operationState = Describe(operation);
+                    status = "Ready check — countdown";
+                    changed = operation.Changed.Task;
+                    wait = operation.Deadline - clockNow();
+                    if (!initialWait) Emit(ControllerDecision.Scheduled, operation);
                 }
-                // Invocation and cancellation remain serialized, and uncertain outcomes are never retried.
-                status = "Sending accept";
-                operation.Stage = AcceptOperationStage.Dispatched;
-                operation.DispatchedAt = clockNow();
-                operationState = Describe(operation);
-                Emit(ControllerDecision.Dispatched, operation);
-                accepting = operation.Client.AcceptWithStatusAsync(token);
-            }
-            var statusCode = await accepting.ConfigureAwait(false);
-            lock (gate)
-            {
-                operation.Outcome = AcceptRequestOutcome.CompletedUnconfirmed;
-                if (ReferenceEquals(pending, operation)) operationState = Describe(operation);
-                Emit(ControllerDecision.Completed, operation, latency: RequestLatency(operation), httpStatus: statusCode);
-                if (IsCurrent(operation)) { status = "Accept sent"; }
+                // Wake on a live edit without creating a second accept owner. Cancel the superseded timer.
+                if (wait > TimeSpan.Zero || initialWait)
+                {
+                    initialWait = false;
+                    using (var waiting = CancellationTokenSource.CreateLinkedTokenSource(token))
+                    {
+                        var timer = delayAsync(wait > TimeSpan.Zero ? wait : TimeSpan.Zero, waiting.Token);
+                        var winner = await Task.WhenAny(timer, changed).ConfigureAwait(false);
+                        waiting.Cancel();
+                        if (winner == changed)
+                        {
+                            lock (gate) { if (operation.Deadline > clockNow()) continue; }
+                        }
+                        token.ThrowIfCancellationRequested();
+                    }
+                }
+                double minimumElapsed;
+                long verifiedSchedule;
+                lock (gate)
+                {
+                    if (!IsCurrent(operation)) { return; }
+                    if (clockNow() < operation.Deadline) continue;
+                    verifiedSchedule = operation.ScheduleRevision;
+                    operation.IsWaiting = false;
+                    operation.Stage = AcceptOperationStage.Verifying;
+                    operationState = Describe(operation);
+                    status = "Verifying ready check";
+                    minimumElapsed = operation.InitialElapsedSeconds +
+                        Math.Max(0, (clockNow() - operation.DetectedAt).TotalSeconds);
+                    Emit(ControllerDecision.Verifying, operation);
+                }
+                var snapshot = await operation.Client.ReadAsync(token).ConfigureAwait(false);
+                Task<int?> accepting;
+                lock (gate)
+                {
+                    var failures = EligibilityFailure.None;
+                    if (!IsCurrent(operation)) failures |= EligibilityFailure.StaleOperation;
+                    if (!snapshot.IsPending) failures |= EligibilityFailure.NotPending;
+                    // Compare only the operation's own session timer, never a replacement session's timer.
+                    var last = ReferenceEquals(pending, operation) ? lastElapsed : operation.LastElapsed;
+                    if (snapshot.ElapsedSeconds < last) failures |= EligibilityFailure.TimerBackwards;
+                    if (snapshot.ElapsedSeconds < minimumElapsed) failures |= EligibilityFailure.InsufficientTimer;
+                    Emit(ControllerDecision.Verification, operation, failures: failures, lastTimer: last,
+                        returnedTimer: snapshot.ElapsedSeconds, requiredTimer: minimumElapsed);
+                    if (failures != EligibilityFailure.None)
+                    {
+                        if (IsCurrent(operation)) status = "Check no longer eligible — accept manually";
+                        return;
+                    }
+                    if (verifiedSchedule != operation.ScheduleRevision || clockNow() < operation.Deadline)
+                    {
+                        // A live edit while the final read was held requires a new wait and a fresh verification.
+                        operation.IsWaiting = true;
+                        continue;
+                    }
+                    // Invocation and cancellation remain serialized, and uncertain outcomes are never retried.
+                    status = "Sending accept";
+                    operation.Stage = AcceptOperationStage.Dispatched;
+                    operation.DispatchedAt = clockNow();
+                    operationState = Describe(operation);
+                    Emit(ControllerDecision.Dispatched, operation);
+                    accepting = operation.Client.AcceptWithStatusAsync(token);
+                }
+                var statusCode = await accepting.ConfigureAwait(false);
+                lock (gate)
+                {
+                    operation.Outcome = AcceptRequestOutcome.CompletedUnconfirmed;
+                    if (ReferenceEquals(pending, operation)) operationState = Describe(operation);
+                    Emit(ControllerDecision.Completed, operation, latency: RequestLatency(operation), httpStatus: statusCode);
+                    if (IsCurrent(operation)) { status = "Accept sent"; }
+                }
+                return;
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -357,9 +409,13 @@ public sealed class ReadyCheckController(
         await finishing.ConfigureAwait(false);
     }
 
-    private sealed record PendingAccept(long Session, IReadyCheckClient Client, DateTimeOffset Deadline,
-        double InitialElapsedSeconds, TimeSpan Delay)
+    private sealed record PendingAccept(long Session, IReadyCheckClient Client, DateTimeOffset DetectedAt,
+        double InitialElapsedSeconds, TimeSpan InitialDelay)
     {
+        public DateTimeOffset Deadline { get; set; } = DetectedAt + InitialDelay;
+        public TimeSpan Delay { get; set; } = InitialDelay;
+        public TaskCompletionSource Changed { get; set; } = new();
+        public long ScheduleRevision { get; set; }
         public long AttemptId { get; set; }
         public long? CheckId { get; set; }
         public AcceptOperationStage Stage { get; set; } = AcceptOperationStage.Waiting;

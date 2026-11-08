@@ -425,6 +425,52 @@ public sealed class PlannedPickTests
         Assert.That(diagnostics.GetMemoryHistory().Events.Last(e => e.Code == "draft.pick").Details.Pick, Is.EqualTo(picks.State));
     }
 
+    // Catches ignoring live pace/hover edits or restarting either original clock.
+    [Test]
+    public async Task LiveTimingUsesOriginalActionAndHoverStart()
+    {
+        var clock = new PlannedBanTests.Clock(); var client = new Client();
+        var plan = Plan(1) with { Timing = new(3, 5000, 5000, 3000, 250) };
+        var picks = new PlannedPickExecutor(Observer(), () => plan, true, clock);
+        await picks.RefreshAsync(client, client.Snapshot, default); clock.Advance(2000);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+        plan = plan with { Revision = 2, Timing = new(3, 0, 5000, 3000, 250) };
+        await picks.RefreshAsync(client, client.Snapshot, default); client.Hover(1);
+        clock.Advance(2000); await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.EqualTo(new[] { (11L, 1, false) }));
+        plan = plan with { Revision = 3, Timing = new(3, 0, 0, 3000, 250) };
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.EqualTo(new[] { (11L, 1, false), (11L, 1, true) }));
+    }
+
+    // Catches a timing edit during final read bypassing the latest normal pacing or urgent threshold.
+    [Test]
+    public async Task FinalReadReevaluatesLiveTimingBeforePickDispatch()
+    {
+        var client = new Client { Snapshot = Snapshot(2000) }; var plan = Plan(1);
+        client.OnRead = () => plan = plan with { Revision = 2, Timing = new(3, 5000, 5000, 1000, 250) };
+        var picks = new PlannedPickExecutor(Observer(), () => plan, true, new PlannedBanTests.Clock());
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+    }
+
+    // Catches a stale incomplete observation plus a timing edit reviving a confirmed finished action.
+    [Test]
+    public async Task CompletedPickIsNeverRevivedByLiveTimingAndStaleObservation()
+    {
+        var client = new Client();
+        var plan = Plan(1) with { ManualPickPolicy = ManualPickPolicy.UseRolePlan };
+        var picks = new PlannedPickExecutor(Observer(), () => plan, true, new PlannedBanTests.Clock());
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        client.Snapshot = Snapshot(1500); client.Hover(1, true);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        client.Hover(0); plan = plan with { Revision = 2, Timing = new(0, 0, 0, 10000, 250) };
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty);
+        Assert.That(picks.State.Status, Is.EqualTo(PickStatus.Completed));
+    }
+
     internal static RolePlanRevision Plan(params int[] ids) => new(1, RolePlanRevision.Empty.Roles.SetItem(DraftRole.Middle, new([..ids], [])));
     internal static DraftSnapshot Snapshot(long remaining = 28000) => DraftObserverTests.Draft(remaining: remaining) with
     { Actions = [new(11, 2, DraftActionKind.Pick, 0, true, false)] };

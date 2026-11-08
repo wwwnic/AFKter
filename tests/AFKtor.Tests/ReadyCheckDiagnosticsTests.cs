@@ -31,7 +31,7 @@ public class ReadyCheckDiagnosticsTests
             Assert.That(state.Arming.Armed, Is.True);
             Assert.That(state.Settings.DelaySeconds, Is.EqualTo(8));
             Assert.That(state.Operation.AttemptId, Is.EqualTo(1));
-            Assert.That(state.Operation.CapturedDelaySeconds, Is.EqualTo(3));
+            Assert.That(state.Operation.CapturedDelaySeconds, Is.EqualTo(8));
             Assert.That(state.Operation.Stage, Is.EqualTo(AcceptOperationStage.Waiting));
         });
         var records = await QueryEvents(diagnostics);
@@ -282,9 +282,10 @@ public class ReadyCheckDiagnosticsTests
         var session = c.BeginSession(api); c.Update(session, new(ReadyCheckSnapshot.Inactive)); c.SetArmed(true);
         c.Update(session, new(new("InProgress", "None", 0)));
         clock.Advance(1); c.AcceptDelay = TimeSpan.FromSeconds(8);
-        Assert.That(diagnostics.GetState().Operation.RemainingSeconds, Is.EqualTo(2).Within(.1));
-        Assert.That(diagnostics.GetState().Operation.Deadline, Is.EqualTo(DateTimeOffset.UnixEpoch.AddSeconds(3)));
-        clock.Advance(2);
+        Assert.That(diagnostics.GetState().Operation.RemainingSeconds, Is.EqualTo(7).Within(.1));
+        Assert.That(diagnostics.GetState().Operation.Deadline, Is.EqualTo(DateTimeOffset.UnixEpoch.AddSeconds(8)));
+        api.Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", 8));
+        clock.Advance(7);
         Assert.That(diagnostics.GetState().Operation.RemainingSeconds, Is.Null);
     }
 

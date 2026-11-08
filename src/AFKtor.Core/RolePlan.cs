@@ -17,6 +17,7 @@ public enum PlanList { Picks, Bans }
 public sealed record RolePlan(ImmutableArray<int> Picks, ImmutableArray<int> Bans);
 public sealed record RolePlanRevision(long Revision, ImmutableDictionary<DraftRole, RolePlan> Roles, ManualPickPolicy ManualPickPolicy = ManualPickPolicy.LockCurrentHover)
 {
+    public TimingSettings Timing { get; init; } = TimingSettings.Default;
     public static RolePlanRevision Empty { get; } = new(0, Enum.GetValues<DraftRole>().ToImmutableDictionary(r => r, _ => new RolePlan([], [])));
     public RolePlan For(DraftRole role) => Roles[role];
 }
