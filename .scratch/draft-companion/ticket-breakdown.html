@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AFKtor draft companion — Proposed ticket breakdown</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 56rem; margin: auto; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+  </style>
+</head>
+<body><main>
+  <h1>Draft companion: proposed ticket breakdown</h1>
+  <p>November 7, 2026. Draft for granularity and dependency review; these are not yet published implementation tickets. Source: <a href="spec.html">approved design</a>. After approval, publish separate HTML tickets with status ready-for-agent and relative blocker links.</p>
+
+  <section id="01"><h2>01: Observe supported drafts without taking action</h2>
+    <p><strong>Blocked by:</strong> None.</p>
+    <p><strong>What it delivers:</strong> The player can see supported draft status, assigned role, local action windows, and why automation is observing only. Agents can inspect the same state through existing diagnostics.</p>
+    <ul>
+      <li>Verify installed-client queue IDs, role assignment, action identity, timer semantics, teammate pick intent, and draft lifecycle using authoritative API references and replay fixtures. Record which observations still need native verification.</li>
+      <li>Expose draft/role/action/admission status in the tray and bounded read-only diagnostics. Keep the observer independent from UI and retain existing acceptance behavior.</li>
+      <li>Show unsupported queue, unknown role, ended draft, and disconnected states without draft writes.</li>
+      <li>Enabling or reconnecting mid-draft is observe-only until a demonstrably new draft. Disarming cancels session work; enabled state persists across matches but not app restarts.</li>
+      <li>Verify duplicate/out-of-order events, fresh-state admission, and session replacement with deterministic tests; demonstrate a read-only draft progression.</li>
+    </ul>
+  </section>
+
+  <section id="02"><h2>02: Edit and autosave role plans live</h2>
+    <p><strong>Blocked by:</strong> None.</p>
+    <p><strong>What it delivers:</strong> The player can build and reorder pick and ban priorities for each role, with immediate effective changes, automatic persistence, and visible save failure status.</p>
+    <ul>
+      <li>Provide a modest native plan editor with champion identification, ordered lists, empty plans, and no Apply button. Record the champion catalog source and update/failure behavior.</li>
+      <li>Publish one immutable revision per complete edit; do not publish unfinished drags or invalid input. Persist coherent revisions without delaying their in-memory effect.</li>
+      <li>Expose current effective revision and persistence health through the UI and existing diagnostics.</li>
+      <li>Failed saving leaves the latest in-memory plan effective and visibly unsaved; retry and restart recovery are verified. Malformed stored data cannot create arbitrary plans.</li>
+      <li>Demonstrate rapid editing, reorder, failure/recovery, and reopening the app. Verify these behaviors without a League client.</li>
+    </ul>
+  </section>
+
+  <section id="03"><h2>03: Complete planned bans while protecting teammate picks</h2>
+    <p><strong>Blocked by:</strong> 01, 02.</p>
+    <p><strong>What it delivers:</strong> An admitted armed draft uses the assigned role's first eligible ban, skips teammates' intended picks, and explains exhausted plans.</p>
+    <ul>
+      <li>Complete a narrow end-to-end path from live plan through decision, LCU action, observed outcome, tray status, and diagnostics.</li>
+      <li>Skip unavailable/already banned candidates and teammate pick intent, including intent changed immediately before dispatch. A teammate's same ban selection alone does not protect the champion.</li>
+      <li>Re-evaluate live revisions and eligibility before dispatch; serialize requests per action and reconcile ambiguous outcomes instead of blindly retrying.</li>
+      <li>External manual ban selection ends ban automation for the draft. Distinguish own acknowledgments; ambiguous attribution yields to manual control. No ban watchdog.</li>
+      <li>Exhaustion logs and does nothing; later changed eligibility or a new plan can provide an option. Completed bans are not revised.</li>
+      <li>Define and test a modest default ban pacing rule with an urgent deadline path; cancel on disarm, disconnect, or action/session end.</li>
+    </ul>
+  </section>
+
+  <section id="04"><h2>04: Hover and lock planned picks, respecting manual takeover</h2>
+    <p><strong>Blocked by:</strong> 01, 02.</p>
+    <p><strong>What it delivers:</strong> The app hovers the first available planned pick, locks with deliberate pacing, and defaults to locking the current hover at the deadline after a manual pick change.</p>
+    <ul>
+      <li>Use the assigned role's latest ordered plan, with no invented fallback. Expose current selection, countdown, takeover, skipped/exhausted reasons, and observed outcome in status and diagnostics.</li>
+      <li>Choose documented numeric defaults for normal timing and urgent request margin, grounded in client timer evidence. Skip avoidable waits when admitted actions begin late; never write after expiry.</li>
+      <li>Recheck revision, eligibility, action identity, enabled state, and deadline before dispatch. Cancel superseded queued work; reconcile requests already sent before issuing another.</li>
+      <li>Manual hover changes pause normal pick automation for the draft. Own hover acknowledgments do not cause takeover; ambiguous attribution yields. The default watchdog only locks the current valid hover, even outside the plan.</li>
+      <li>A live plan edit may replace an automatic hover but does not exit manual-control mode. Repeated updates/edits cannot indefinitely reset deadlines or create concurrent requests.</li>
+      <li>Verify normal and urgent flows, invalid hover, exhausted plan, editing races, external changes, request ambiguity, cancellation, and completed picks with a simulated clock and client.</li>
+    </ul>
+  </section>
+
+  <section id="05"><h2>05: Choose the deadline behavior after a manual pick change</h2>
+    <p><strong>Blocked by:</strong> 04.</p>
+    <p><strong>What it delivers:</strong> The player can choose Lock current hover (default), Use my role plan, or Do nothing, with live application and autosave.</p>
+    <ul>
+      <li>Place the explained policy in main automation settings, using existing persistence and revision handling.</li>
+      <li>Plan fallback selects and locks the first eligible current planned champion even when replacing a manual hover. Exhaustion logs and does nothing.</li>
+      <li>Current-hover fallback never substitutes a champion if that hover is invalid. Do nothing stops both selection and watchdog actions after manual takeover.</li>
+      <li>A policy edit during countdown affects pending work; disarm cancels all policies. Completed/dispatched actions follow the documented irrevocability boundary.</li>
+      <li>Verify all policies, live switches, reload persistence, and explanations in UI/diagnostics.</li>
+    </ul>
+  </section>
+
+  <section id="06"><h2>06: Customize timing with live advanced settings</h2>
+    <p><strong>Blocked by:</strong> 03, 04.</p>
+    <p><strong>What it delivers:</strong> Default timing remains sufficient, while advanced users can change timing and restore author defaults without an Apply button.</p>
+    <ul>
+      <li>Expose supported timing controls and bounded valid ranges, with defaults inherited from executed ban/pick behavior. Explain normal pacing and urgent deadline priority.</li>
+      <li>Publish valid edits immediately and autosave; invalid transient input preserves effective settings. Reset restores defaults as one coherent revision.</li>
+      <li>Re-evaluate pending draft work from original action timing, never extend the action deadline or revive finished/expired actions.</li>
+      <li>Extend existing ready-check delay handling to live edits from the original check-detection time: shortening past elapsed delay starts verification; lengthening moves the undispatched countdown. Do not revive previously skipped checks or resend accept attempts.</li>
+      <li>Update existing acceptance documentation/tests to make this reviewed contract change explicit. Preserve starts-disarmed and one-attempt behavior.</li>
+      <li>Verify live edits at dispatch boundaries, zero/maximum timing, persistence failure, reset, and observable countdown/status consistency.</li>
+    </ul>
+  </section>
+
+  <section id="07"><h2>07: Validate the unattended queue-to-draft journey on Windows</h2>
+    <p><strong>Blocked by:</strong> 03, 05, 06.</p>
+    <p><strong>What it delivers:</strong> A release acceptance record establishes what actually works with native UI and the installed League Client, including consecutive matches and intervention.</p>
+    <ul>
+      <li>Run repository build and tests, then native Windows and supported live-client checks. Record client version, queue ID, settings, observed outcomes, and evidence; mark unavailable checks as blocked rather than passed.</li>
+      <li>Verify armed acceptance through role-specific ban/pick completion and staying armed for the next match; app restart remains disarmed.</li>
+      <li>Verify live edits during draft, teammate pick protection, exhausted plans, all manual-pick policies, manual-ban takeover, and default/advanced timing.</li>
+      <li>Verify League restart/disconnect, mid-draft enable/reconnect observing only, disarm/shutdown cancellation, and no replay of old writes.</li>
+      <li>Confirm diagnostics explain choices without credentials and failures in diagnostic storage do not block automation.</li>
+      <li>Address discovered regressions with focused reproduction; document remaining limitations and release readiness without treating simulation as live evidence.</li>
+    </ul>
+  </section>
+
+  <h2>Dependency rationale</h2>
+  <p>01 and 02 can start independently. Both execution slices need observed draft state and live plans, but bans and picks do not inherently block one another. Any shared coordination work stays minimal in the first slice that needs it. 05 extends pick takeover; 06 needs working pick and ban timing; 07 integrates the complete journey. Each behavior ticket includes its own tests, status, and diagnostics rather than postponing those layers to separate tickets.</p>
+</main></body>
+</html>
