@@ -19,6 +19,8 @@
     <dl>
       <dt>Status</dt>
       <dd>ready-for-agent</dd>
+      <dt>Resolution</dt>
+      <dd>Implemented; automated verification passed; native Windows and League acceptance pending. Draft writes remain gated off.</dd>
       <dt>Blocked by</dt>
       <dd><a href="03-complete-planned-bans.html">03</a>, <a href="04-hover-and-lock-planned-picks.html">04</a></dd>
     </dl>
@@ -42,6 +44,7 @@
       <h2>Comments</h2>
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Implemented ticket 06 in <code>bd47a76</code>. Main Settings and initially collapsed advanced controls apply valid bounded timing edits live and autosave with plans/policy; unfinished input does not publish. One-revision timing reset retains plans/policy. Existing settings.json delay imports into old/new v1 revisions and newer saved timing takes precedence. Ready-check edits retain original detection and attempt identity, wake shortened waits, move longer waits, and require fresh verification after any held-read edit; skipped/attempted checks stay terminal. Draft timing uses original action/hover clocks, shared revision dispatch guards, conservative deadlines and terminal completion. SDK 10.0.403: baseline 285/285; final Release suite 304/304 passed; Release Windows cross-build zero warnings/errors; git diff --check clean. See <a href="../../../docs/live-timing.md">timing contract and evidence</a>. Windows UI/League unavailable; native gates remain false. Ticket 07 has not started.</p>
     </section>
   </main>
 </body>
