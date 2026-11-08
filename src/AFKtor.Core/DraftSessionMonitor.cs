@@ -32,9 +32,10 @@ public sealed class DraftSessionMonitor(
                     generation = observer.BeginSession();
                     sequence = 0;
                 }
+                var armingEpoch = observer.ArmingEpoch;
                 var snapshot = await client!.ReadAsync(lifetime.Token).ConfigureAwait(false);
                 lifetime.Token.ThrowIfCancellationRequested();
-                observer.Observe(generation, ++sequence, snapshot);
+                observer.Observe(generation, ++sequence, snapshot, armingEpoch);
             }
             catch (Exception error) when (error is OperationCanceledException or HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException)
             { Disconnect(); }
