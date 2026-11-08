@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>06: Customize timing with live advanced settings</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>06: Customize timing with live advanced settings</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="03-complete-planned-bans.html">03</a>, <a href="04-hover-and-lock-planned-picks.html">04</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Default timing remains sufficient, while advanced users can change timing and restore author defaults without an Apply button.</p>
+      <p>Source: <a href="../spec.html">approved draft companion design</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Expose supported timing controls and bounded valid ranges, with defaults inherited from executed ban/pick behavior. Explain normal pacing and urgent deadline priority.</li>
+      <li>Publish valid edits immediately and autosave; invalid transient input preserves effective settings. Reset restores defaults as one coherent revision.</li>
+      <li>Re-evaluate pending draft work from original action timing, never extend the action deadline or revive finished/expired actions.</li>
+      <li>Extend existing ready-check delay handling to live edits from the original check-detection time: shortening past elapsed delay starts verification; lengthening moves the undispatched countdown. Do not revive previously skipped checks or resend accept attempts.</li>
+      <li>Update existing acceptance documentation/tests to make this reviewed contract change explicit. Preserve starts-disarmed and one-attempt behavior.</li>
+      <li>Verify live edits at dispatch boundaries, zero/maximum timing, persistence failure, reset, and observable countdown/status consistency.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+    </section>
+  </main>
+</body>
+</html>

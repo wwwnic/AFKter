@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>04: Hover and lock planned picks, respecting manual takeover</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>04: Hover and lock planned picks, respecting manual takeover</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="01-observe-supported-drafts.html">01</a>, <a href="02-edit-and-autosave-role-plans.html">02</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>The app hovers the first available planned pick, locks with deliberate pacing, and defaults to locking the current hover at the deadline after a manual pick change.</p>
+      <p>Source: <a href="../spec.html">approved draft companion design</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Use the assigned role's latest ordered plan, with no invented fallback. Expose current selection, countdown, takeover, skipped/exhausted reasons, and observed outcome in status and diagnostics.</li>
+      <li>Choose documented numeric defaults for normal timing and urgent request margin, grounded in client timer evidence. Skip avoidable waits when admitted actions begin late; never write after expiry.</li>
+      <li>Recheck revision, eligibility, action identity, enabled state, and deadline before dispatch. Cancel superseded queued work; reconcile requests already sent before issuing another.</li>
+      <li>Manual hover changes pause normal pick automation for the draft. Own hover acknowledgments do not cause takeover; ambiguous attribution yields. The default watchdog only locks the current valid hover, even outside the plan.</li>
+      <li>A live plan edit may replace an automatic hover but does not exit manual-control mode. Repeated updates/edits cannot indefinitely reset deadlines or create concurrent requests.</li>
+      <li>Verify normal and urgent flows, invalid hover, exhausted plan, editing races, external changes, request ambiguity, cancellation, and completed picks with a simulated clock and client.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+    </section>
+  </main>
+</body>
+</html>

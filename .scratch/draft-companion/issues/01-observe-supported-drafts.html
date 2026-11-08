@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>01: Observe supported drafts without taking action</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>01: Observe supported drafts without taking action</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd>None</dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>The player can see supported draft status, assigned role, local action windows, and why automation is observing only. Agents can inspect the same state through existing diagnostics.</p>
+      <p>Source: <a href="../spec.html">approved draft companion design</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Verify installed-client queue IDs, role assignment, action identity, timer semantics, teammate pick intent, and draft lifecycle using authoritative API references and replay fixtures. Record which observations still need native verification.</li>
+      <li>Expose draft/role/action/admission status in the tray and bounded read-only diagnostics. Keep the observer independent from UI and retain existing acceptance behavior.</li>
+      <li>Show unsupported queue, unknown role, ended draft, and disconnected states without draft writes.</li>
+      <li>Enabling or reconnecting mid-draft is observe-only until a demonstrably new draft. Disarming cancels session work; enabled state persists across matches but not app restarts.</li>
+      <li>Verify duplicate/out-of-order events, fresh-state admission, and session replacement with deterministic tests; demonstrate a read-only draft progression.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+    </section>
+  </main>
+</body>
+</html>

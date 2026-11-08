@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AFKtor draft companion — Proposed ticket breakdown</title>
+  <title>AFKtor draft companion — Approved ticket breakdown</title>
   <style>
     :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
     body { max-width: 56rem; margin: auto; padding: 2rem 1rem; line-height: 1.6; }
@@ -11,10 +11,10 @@
   </style>
 </head>
 <body><main>
-  <h1>Draft companion: proposed ticket breakdown</h1>
-  <p>November 7, 2026. Draft for granularity and dependency review; these are not yet published implementation tickets. Source: <a href="spec.html">approved design</a>. After approval, publish separate HTML tickets with status ready-for-agent and relative blocker links.</p>
+  <h1>Draft companion: approved ticket breakdown</h1>
+  <p>November 7, 2026. Breakdown approved; all seven tickets are published individually with status ready-for-agent. Source: <a href="spec.html">approved design</a>. Blocking relationships determine which tickets can start.</p>
 
-  <section id="01"><h2>01: Observe supported drafts without taking action</h2>
+  <section id="01"><h2><a href="issues/01-observe-supported-drafts.html">01: Observe supported drafts without taking action</a></h2>
     <p><strong>Blocked by:</strong> None.</p>
     <p><strong>What it delivers:</strong> The player can see supported draft status, assigned role, local action windows, and why automation is observing only. Agents can inspect the same state through existing diagnostics.</p>
     <ul>
@@ -26,7 +26,7 @@
     </ul>
   </section>
 
-  <section id="02"><h2>02: Edit and autosave role plans live</h2>
+  <section id="02"><h2><a href="issues/02-edit-and-autosave-role-plans.html">02: Edit and autosave role plans live</a></h2>
     <p><strong>Blocked by:</strong> None.</p>
     <p><strong>What it delivers:</strong> The player can build and reorder pick and ban priorities for each role, with immediate effective changes, automatic persistence, and visible save failure status.</p>
     <ul>
@@ -38,7 +38,7 @@
     </ul>
   </section>
 
-  <section id="03"><h2>03: Complete planned bans while protecting teammate picks</h2>
+  <section id="03"><h2><a href="issues/03-complete-planned-bans.html">03: Complete planned bans while protecting teammate picks</a></h2>
     <p><strong>Blocked by:</strong> 01, 02.</p>
     <p><strong>What it delivers:</strong> An admitted armed draft uses the assigned role's first eligible ban, skips teammates' intended picks, and explains exhausted plans.</p>
     <ul>
@@ -51,7 +51,7 @@
     </ul>
   </section>
 
-  <section id="04"><h2>04: Hover and lock planned picks, respecting manual takeover</h2>
+  <section id="04"><h2><a href="issues/04-hover-and-lock-planned-picks.html">04: Hover and lock planned picks, respecting manual takeover</a></h2>
     <p><strong>Blocked by:</strong> 01, 02.</p>
     <p><strong>What it delivers:</strong> The app hovers the first available planned pick, locks with deliberate pacing, and defaults to locking the current hover at the deadline after a manual pick change.</p>
     <ul>
@@ -64,7 +64,7 @@
     </ul>
   </section>
 
-  <section id="05"><h2>05: Choose the deadline behavior after a manual pick change</h2>
+  <section id="05"><h2><a href="issues/05-configure-manual-pick-deadline-behavior.html">05: Choose the deadline behavior after a manual pick change</a></h2>
     <p><strong>Blocked by:</strong> 04.</p>
     <p><strong>What it delivers:</strong> The player can choose Lock current hover (default), Use my role plan, or Do nothing, with live application and autosave.</p>
     <ul>
@@ -76,7 +76,7 @@
     </ul>
   </section>
 
-  <section id="06"><h2>06: Customize timing with live advanced settings</h2>
+  <section id="06"><h2><a href="issues/06-customize-live-timing-settings.html">06: Customize timing with live advanced settings</a></h2>
     <p><strong>Blocked by:</strong> 03, 04.</p>
     <p><strong>What it delivers:</strong> Default timing remains sufficient, while advanced users can change timing and restore author defaults without an Apply button.</p>
     <ul>
@@ -89,7 +89,7 @@
     </ul>
   </section>
 
-  <section id="07"><h2>07: Validate the unattended queue-to-draft journey on Windows</h2>
+  <section id="07"><h2><a href="issues/07-validate-unattended-draft-on-windows.html">07: Validate the unattended queue-to-draft journey on Windows</a></h2>
     <p><strong>Blocked by:</strong> 03, 05, 06.</p>
     <p><strong>What it delivers:</strong> A release acceptance record establishes what actually works with native UI and the installed League Client, including consecutive matches and intervention.</p>
     <ul>

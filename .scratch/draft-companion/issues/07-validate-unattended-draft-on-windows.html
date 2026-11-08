@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>07: Validate the unattended queue-to-draft journey on Windows</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>07: Validate the unattended queue-to-draft journey on Windows</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="03-complete-planned-bans.html">03</a>, <a href="05-configure-manual-pick-deadline-behavior.html">05</a>, <a href="06-customize-live-timing-settings.html">06</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>A release acceptance record establishes what actually works with native UI and the installed League Client, including consecutive matches and intervention.</p>
+      <p>Source: <a href="../spec.html">approved draft companion design</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Run repository build and tests, then native Windows and supported live-client checks. Record client version, queue ID, settings, observed outcomes, and evidence; mark unavailable checks as blocked rather than passed.</li>
+      <li>Verify armed acceptance through role-specific ban/pick completion and staying armed for the next match; app restart remains disarmed.</li>
+      <li>Verify live edits during draft, teammate pick protection, exhausted plans, all manual-pick policies, manual-ban takeover, and default/advanced timing.</li>
+      <li>Verify League restart/disconnect, mid-draft enable/reconnect observing only, disarm/shutdown cancellation, and no replay of old writes.</li>
+      <li>Confirm diagnostics explain choices without credentials and failures in diagnostic storage do not block automation.</li>
+      <li>Address discovered regressions with focused reproduction; document remaining limitations and release readiness without treating simulation as live evidence.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+    </section>
+  </main>
+</body>
+</html>

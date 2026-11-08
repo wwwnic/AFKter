@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>03: Complete planned bans while protecting teammate picks</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>03: Complete planned bans while protecting teammate picks</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="01-observe-supported-drafts.html">01</a>, <a href="02-edit-and-autosave-role-plans.html">02</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>An admitted armed draft uses the assigned role's first eligible ban, skips teammates' intended picks, and explains exhausted plans.</p>
+      <p>Source: <a href="../spec.html">approved draft companion design</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Complete a narrow end-to-end path from live plan through decision, LCU action, observed outcome, tray status, and diagnostics.</li>
+      <li>Skip unavailable/already banned candidates and teammate pick intent, including intent changed immediately before dispatch. A teammate's same ban selection alone does not protect the champion.</li>
+      <li>Re-evaluate live revisions and eligibility before dispatch; serialize requests per action and reconcile ambiguous outcomes instead of blindly retrying.</li>
+      <li>External manual ban selection ends ban automation for the draft. Distinguish own acknowledgments; ambiguous attribution yields to manual control. No ban watchdog.</li>
+      <li>Exhaustion logs and does nothing; later changed eligibility or a new plan can provide an option. Completed bans are not revised.</li>
+      <li>Define and test a modest default ban pacing rule with an urgent deadline path; cancel on disarm, disconnect, or action/session end.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+    </section>
+  </main>
+</body>
+</html>

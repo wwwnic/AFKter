@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>02: Edit and autosave role plans live</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>02: Edit and autosave role plans live</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd>None</dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>The player can build and reorder pick and ban priorities for each role, with immediate effective changes, automatic persistence, and visible save failure status.</p>
+      <p>Source: <a href="../spec.html">approved draft companion design</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Provide a modest native plan editor with champion identification, ordered lists, empty plans, and no Apply button. Record the champion catalog source and update/failure behavior.</li>
+      <li>Publish one immutable revision per complete edit; do not publish unfinished drags or invalid input. Persist coherent revisions without delaying their in-memory effect.</li>
+      <li>Expose current effective revision and persistence health through the UI and existing diagnostics.</li>
+      <li>Failed saving leaves the latest in-memory plan effective and visibly unsaved; retry and restart recovery are verified. Malformed stored data cannot create arbitrary plans.</li>
+      <li>Demonstrate rapid editing, reorder, failure/recovery, and reopening the app. Verify these behaviors without a League client.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+    </section>
+  </main>
+</body>
+</html>

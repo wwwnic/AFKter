@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>05: Choose the deadline behavior after a manual pick change</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>05: Choose the deadline behavior after a manual pick change</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>ready-for-agent</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="04-hover-and-lock-planned-picks.html">04</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>The player can choose Lock current hover (default), Use my role plan, or Do nothing, with live application and autosave.</p>
+      <p>Source: <a href="../spec.html">approved draft companion design</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Place the explained policy in main automation settings, using existing persistence and revision handling.</li>
+      <li>Plan fallback selects and locks the first eligible current planned champion even when replacing a manual hover. Exhaustion logs and does nothing.</li>
+      <li>Current-hover fallback never substitutes a champion if that hover is invalid. Do nothing stops both selection and watchdog actions after manual takeover.</li>
+      <li>A policy edit during countdown affects pending work; disarm cancels all policies. Completed/dispatched actions follow the documented irrevocability boundary.</li>
+      <li>Verify all policies, live switches, reload persistence, and explanations in UI/diagnostics.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+    </section>
+  </main>
+</body>
+</html>
