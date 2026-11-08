@@ -33,8 +33,11 @@ Afkter test environment**:
   omits fields Afkter requires, including teammate `championPickIntent` and timer
   `isInfinite`.
 
-The tool was inspected, not installed or run against Afkter. It is a candidate
-for future integration and a source of scenario ideas; adapting it should
+A subsequent [runtime evaluation](lol-testbed-evaluation.md) installed and ran
+the tool: its 21 tests passed, and Afkter sent direct commands through an external
+HTTPS listener. Full automation remains blocked by the gaps above plus event/REST
+state and WebSocket-topic differences. It remains a candidate for future
+integration and a source of scenario ideas; adapting it should
 preserve Afkter's production identity, timing, and transport checks. Recheck the
 upstream implementation before integration because these links track its default
 branch.
