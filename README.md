@@ -11,7 +11,9 @@ remaining native checks](docs/draft-observer.md). The planned-ban pipeline is im
 with an explicit shipped gate that keeps draft writes disabled pending installed-client
 verification. See [ban behavior and readiness evidence](docs/planned-bans.md).
 Planned pick hover/lock and the default manual-hover deadline watchdog are also
-implemented behind the same closed gate; see [pick behavior and native checks](docs/planned-picks.md).
+implemented behind the same closed gate. Settings now offers live, autosaved
+manual-pick deadline policies: Lock current hover (default), Use my role plan,
+or Do nothing. See [pick behavior and native checks](docs/planned-picks.md).
 
 The app name is **Afkter**. Existing `AFKtor.*` project, assembly, and namespace
 identifiers and the `X-AFKtor-Run-Id` diagnostics header remain unchanged. Saved
