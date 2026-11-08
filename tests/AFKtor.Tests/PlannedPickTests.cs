@@ -471,6 +471,81 @@ public sealed class PlannedPickTests
         Assert.That(picks.State.Status, Is.EqualTo(PickStatus.Completed));
     }
 
+    // Catches dropping completion seen only in final verification, then reviving it through live edits.
+    [TestCase(false, 86, true)]
+    [TestCase(true, 86, true)]
+    [TestCase(true, 1, false)]
+    public async Task HeldFinalReadCompletionRemainsTerminalAcrossStaleObservationsAndEdits(bool ownHover, int champion, bool manual)
+    {
+        await using var diagnostics = new AFKtor.Core.Diagnostics.DiagnosticCollector();
+        var clock = new PlannedBanTests.Clock(); var client = new Client(); var plan = Plan(1);
+        var observer = Observer();
+        var picks = new PlannedPickExecutor(observer, () => plan, true, clock, diagnostics);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        clock.Advance(1000);
+        if (ownHover)
+        {
+            await picks.RefreshAsync(client, client.Snapshot, default);
+            client.Hover(1);
+            clock.Advance(1000);
+        }
+        var stale = client.Snapshot;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<DraftSnapshot?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.ReadOverride = _ => { entered.TrySetResult(); return release.Task; };
+        var refresh = picks.RefreshAsync(client, stale, default);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        plan = plan with { Revision = 2, Timing = new(0, 0, 0, 10000, 250) };
+        client.Hover(champion, true);
+        release.SetResult(client.Snapshot);
+        await refresh;
+        var completed = new PickState(PickStatus.Completed, observer.State.Generation, stale.GameId, 11,
+            2, champion, manual, Lock: true, Outcome: ownHover ? BanRequestOutcome.Accepted : null);
+        Assert.That(picks.State, Is.EqualTo(completed));
+        client.ReadOverride = null;
+        client.Snapshot = stale;
+        foreach (var policy in new[] { ManualPickPolicy.UseRolePlan, ManualPickPolicy.DoNothing, ManualPickPolicy.LockCurrentHover })
+        {
+            plan = Plan(2) with { Revision = plan.Revision + 1, ManualPickPolicy = policy, Timing = new(0, 0, 0, 10000, 250) };
+            await picks.RefreshAsync(client, stale, default);
+            Assert.That(picks.State, Is.EqualTo(completed));
+        }
+        Assert.That(client.Writes, Is.EqualTo(ownHover ? new[] { (11L, 1, false) } : Array.Empty<(long, int, bool)>()));
+        Assert.That(diagnostics.GetState().Pick, Is.EqualTo(completed));
+        Assert.That(diagnostics.GetMemoryHistory().Events.Last(e => e.Code == "draft.pick").Details.Pick, Is.EqualTo(completed));
+    }
+
+    // Catches an unrelated completed action poisoning the current action's terminal latch.
+    [TestCase("game")]
+    [TestCase("action")]
+    [TestCase("cell")]
+    [TestCase("role")]
+    [TestCase("queue")]
+    public async Task UnrelatedFinalCompletionDoesNotLatchCurrentAction(string changed)
+    {
+        var client = new Client(); var clock = new PlannedBanTests.Clock();
+        var picks = new PlannedPickExecutor(Observer(), () => Plan(1), true, clock);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        clock.Advance(1000);
+        client.Hover(86, true);
+        var completed = client.Snapshot;
+        client.ReadOverride = _ => Task.FromResult<DraftSnapshot?>(changed switch
+        {
+            "game" => completed with { GameId = completed.GameId + 1 },
+            "action" => completed with { Actions = [new(19, 2, DraftActionKind.Pick, 86, false, true)] },
+            "cell" => completed with { LocalCellId = 3 },
+            "role" => completed with { Players = [..completed.Players.Select(p => p.CellId == 2 ? p with { Role = DraftRole.Top } : p)] },
+            _ => completed with { QueueId = 420 }
+        });
+        await picks.RefreshAsync(client, Snapshot(), default);
+        Assert.That(picks.State.Status, Is.EqualTo(PickStatus.Cancelled));
+        Assert.That(client.Writes, Is.Empty);
+        client.ReadOverride = null; client.Snapshot = Snapshot();
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.EqualTo(new[] { (11L, 1, false) }));
+        Assert.That(picks.State.Status, Is.EqualTo(PickStatus.AwaitingOutcome));
+    }
+
     internal static RolePlanRevision Plan(params int[] ids) => new(1, RolePlanRevision.Empty.Roles.SetItem(DraftRole.Middle, new([..ids], [])));
     internal static DraftSnapshot Snapshot(long remaining = 28000) => DraftObserverTests.Draft(remaining: remaining) with
     { Actions = [new(11, 2, DraftActionKind.Pick, 0, true, false)] };
