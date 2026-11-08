@@ -7,7 +7,7 @@ public enum DraftActionKind { None, Pick, Ban }
 public sealed record DraftAction(long Id, long ActorCellId, DraftActionKind Kind, int ChampionId, bool InProgress, bool Completed);
 public sealed record DraftPlayer(long CellId, DraftRole? Role, int ChampionId, int PickIntent);
 public sealed record DraftSnapshot(long GameId, int QueueId, long LocalCellId, ImmutableArray<DraftPlayer> Players,
-    ImmutableArray<DraftAction> Actions, long TimeLeftMilliseconds, bool Infinite = false, bool Custom = false, bool Spectating = false, ImmutableArray<int> BannedChampions = default);
+    ImmutableArray<DraftAction> Actions, long TimeLeftMilliseconds, bool Infinite = false, bool Custom = false, bool Spectating = false, ImmutableArray<int> BannedChampions = default, ImmutableArray<int> EnemyPicks = default);
 public sealed record DraftState(long Generation = 0, long Sequence = 0, long? GameId = null,
     int? QueueId = null, DraftRole? Role = null, DraftAdmission Admission = DraftAdmission.Disconnected,
     long? ActionId = null, DraftActionKind Action = DraftActionKind.None, long? TimeLeftMilliseconds = null);

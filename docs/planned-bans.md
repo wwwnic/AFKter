@@ -5,8 +5,7 @@ simulated League responses. **The shipped tray still sends zero draft writes.**
 `TrayApplicationContext` passes the internal `nativeSemanticsVerified: false` gate;
 it is not a player setting. An admitted ban window displays “waiting for
 installed-client verification” and publishes `NativeVerificationRequired` through
-diagnostics. Ready-check acceptance is unchanged. Picks and watchdogs are outside
-this ticket.
+diagnostics. Ready-check acceptance is unchanged. Picks and the default watchdog are documented separately in [planned-picks.md](planned-picks.md).
 
 ## Decision and execution
 
