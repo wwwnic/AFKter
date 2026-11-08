@@ -17,10 +17,12 @@ public sealed class DraftObserver(AFKtor.Core.Diagnostics.DiagnosticCollector? d
 {
     private readonly object gate = new();
     private DraftState state = new();
-    private long generation, sequence;
+    private long generation, sequence, armingEpoch;
     private bool enabled, connected, baseline, admitted;
     private long? gameId;
     public DraftState State { get { lock (gate) return state; } }
+    /// <summary>Capture before starting an asynchronous read; either enabled-state edge invalidates it.</summary>
+    public long ArmingEpoch { get { lock (gate) return armingEpoch; } }
 
     public long BeginSession()
     {
@@ -42,6 +44,7 @@ public sealed class DraftObserver(AFKtor.Core.Diagnostics.DiagnosticCollector? d
         {
             if (enabled == value) return;
             enabled = value;
+            armingEpoch++;
             if (enabled && gameId is null) baseline = false;
             // Any ongoing draft loses admission on either edge; idle stays a useful baseline.
             if (gameId is not null)
@@ -52,11 +55,12 @@ public sealed class DraftObserver(AFKtor.Core.Diagnostics.DiagnosticCollector? d
         }
     }
 
-    public void Observe(long eventGeneration, long eventSequence, DraftSnapshot? snapshot)
+    public void Observe(long eventGeneration, long eventSequence, DraftSnapshot? snapshot, long? readArmingEpoch = null)
     {
         lock (gate)
         {
             if (!connected || eventGeneration != generation || eventSequence <= sequence) return;
+            if (readArmingEpoch is { } epoch && epoch != armingEpoch) return;
             sequence = eventSequence;
             if (snapshot is null)
             {
