@@ -7,7 +7,9 @@ persisted delay settings and countdown lifecycle handling.
 
 Read-only draft observation now shows queue, assigned role, local action and lifecycle
 admission in the tray and diagnostics. See [observer behavior, API evidence and
-remaining native checks](docs/draft-observer.md). No draft actions are sent.
+remaining native checks](docs/draft-observer.md). The planned-ban pipeline is implemented,
+with an explicit shipped gate that keeps draft writes disabled pending installed-client
+verification. See [ban behavior and readiness evidence](docs/planned-bans.md).
 
 ## Layout
 

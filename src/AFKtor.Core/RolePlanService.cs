@@ -47,6 +47,12 @@ public sealed class RolePlanService : IAsyncDisposable
         }
     }
 
+    /// <summary>Orders an asynchronous request's start against publication of a newer plan; never awaits under the revision gate.</summary>
+    public Task<T>? StartIfCurrent<T>(long revision, Func<Task<T>> start)
+    {
+        lock (gate) return !disposed && current.Revision == revision ? start() : null;
+    }
+
     public async Task SaveLatestAsync()
     {
         await writer.WaitAsync().ConfigureAwait(false);

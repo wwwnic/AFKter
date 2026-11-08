@@ -16,6 +16,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly ReadyCheckSessionMonitor monitor;
     private readonly DraftObserver draftObserver;
     private readonly DraftSessionMonitor draftMonitor;
+    private readonly PlannedBanExecutor plannedBans;
     private readonly ToolStripMenuItem draftStatus = new("Draft: Disconnected") { Enabled = false };
     private readonly ToolStripMenuItem status = new("League: Disconnected") { Enabled = false };
     private readonly ToolStripMenuItem autoAcceptStatus = new("Auto-accept: Disarmed") { Enabled = false };
@@ -52,13 +53,17 @@ internal sealed class TrayApplicationContext : ApplicationContext
             LcuConnection.Parse(await LeagueClientDiscovery.ReadLockfileAsync(token)),
             connection => new LcuReadyCheckClient(connection, client), controller, diagnostics.Collector);
         draftObserver = new DraftObserver(diagnostics.Collector);
+        // Closed until the installed-client evidence described in docs/planned-bans.md is recorded.
+        plannedBans = new PlannedBanExecutor(draftObserver, () => rolePlans.Current,
+            nativeSemanticsVerified: false, diagnostics: diagnostics.Collector, startIfCurrent: rolePlans.StartIfCurrent);
         draftMonitor = new DraftSessionMonitor(async token =>
             LcuConnection.Parse(await LeagueClientDiscovery.ReadLockfileAsync(token)),
-            connection => new LcuDraftClient(connection, client), draftObserver);
+            connection => new LcuDraftClient(connection, client), draftObserver, plannedBans);
         arm.CheckedChanged += (_, _) =>
         {
             controller.SetArmed(arm.Checked);
             draftObserver.SetEnabled(arm.Checked);
+            if (!arm.Checked) plannedBans.ObserveCancellation();
             RenderStatus();
         };
         menu.Items.Add(status);
@@ -128,7 +133,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         draftStatus.Text = $"Draft: {draft.Admission} — queue {draft.QueueId?.ToString() ?? "?"} — {draft.Role?.ToString() ?? "Unknown"} — {draft.Action}" +
             (draft.ActionId is { } actionId ? $" #{actionId}" : "") +
             (draft.TimeLeftMilliseconds is { } milliseconds ? $" ({milliseconds / 1000.0:0.0}s observed)" : "") +
-            " — read only";
+            " — bans: " + (plannedBans.State.Status == BanStatus.NativeVerificationRequired
+                ? "waiting for installed-client verification" : plannedBans.State.Status.ToString());
         var remaining = controller.Remaining;
         autoAcceptStatus.Text = remaining is { } time && time > TimeSpan.Zero
             ? $"Auto-accept: accepting in {time.TotalSeconds:0.0}s"

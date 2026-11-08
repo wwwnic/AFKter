@@ -4,7 +4,7 @@ namespace AFKtor.Core;
 public sealed class DraftSessionMonitor(
     Func<CancellationToken, Task<LcuConnection?>> discover,
     Func<LcuConnection, IDraftClient> createClient,
-    DraftObserver observer) : IAsyncDisposable
+    DraftObserver observer, PlannedBanExecutor? bans = null) : IAsyncDisposable
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly CancellationTokenSource stopping = new();
@@ -36,6 +36,8 @@ public sealed class DraftSessionMonitor(
                 var snapshot = await client!.ReadAsync(lifetime.Token).ConfigureAwait(false);
                 lifetime.Token.ThrowIfCancellationRequested();
                 observer.Observe(generation, ++sequence, snapshot, armingEpoch);
+                if (bans is not null && client is IBanDraftClient banClient)
+                    await bans.RefreshAsync(banClient, snapshot, lifetime.Token).ConfigureAwait(false);
             }
             catch (Exception error) when (error is OperationCanceledException or HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException)
             { Disconnect(); }
@@ -49,12 +51,14 @@ public sealed class DraftSessionMonitor(
         connection = null;
         client = null;
         observer.Disconnect();
+        bans?.ObserveCancellation();
     }
 
     public async Task StopAsync()
     {
         stopping.Cancel();
         observer.Disconnect();
+        bans?.ObserveCancellation();
         await gate.WaitAsync().ConfigureAwait(false);
         try { Disconnect(); }
         finally { gate.Release(); }

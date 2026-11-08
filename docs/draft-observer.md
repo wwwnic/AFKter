@@ -2,7 +2,8 @@
 
 AFKtor now samples draft state alongside ready-check monitoring. The tray menu
 shows admission, queue, assigned role, local active action ID/type, and the last
-observed timer. Every draft status explicitly says **read only**. `Admitted`
+observed timer. The ban pipeline now adds its status alongside this observation; see
+[planned bans](planned-bans.md). The shipped native-readiness gate keeps draft writes disabled. `Admitted`
 means a supported lifecycle was observed from its beginning while enabled; it is
 not an authorization to write, nor proof of installed-client compatibility.
 This ticket sends no draft action requests. Ready-check acceptance is unchanged.
@@ -43,7 +44,8 @@ window cannot gain action admission. The local action is selected by
 `actorCellId == localPlayerCellId`, `isInProgress`, and `!completed`; identity is
 `(generation, gameId, action.id)`, not champion or array position. Teammate
 `championPickIntent` is distinct from a champion selected in a ban action.
-No champion availability/fallback decisions are implemented here.
+Champion availability and ordered ban decisions are implemented separately by the
+[planned-ban executor](planned-bans.md).
 
 ## Evidence and reference limits
 

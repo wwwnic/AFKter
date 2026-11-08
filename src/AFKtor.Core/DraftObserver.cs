@@ -7,7 +7,7 @@ public enum DraftActionKind { None, Pick, Ban }
 public sealed record DraftAction(long Id, long ActorCellId, DraftActionKind Kind, int ChampionId, bool InProgress, bool Completed);
 public sealed record DraftPlayer(long CellId, DraftRole? Role, int ChampionId, int PickIntent);
 public sealed record DraftSnapshot(long GameId, int QueueId, long LocalCellId, ImmutableArray<DraftPlayer> Players,
-    ImmutableArray<DraftAction> Actions, long TimeLeftMilliseconds, bool Infinite = false, bool Custom = false, bool Spectating = false);
+    ImmutableArray<DraftAction> Actions, long TimeLeftMilliseconds, bool Infinite = false, bool Custom = false, bool Spectating = false, ImmutableArray<int> BannedChampions = default);
 public sealed record DraftState(long Generation = 0, long Sequence = 0, long? GameId = null,
     int? QueueId = null, DraftRole? Role = null, DraftAdmission Admission = DraftAdmission.Disconnected,
     long? ActionId = null, DraftActionKind Action = DraftActionKind.None, long? TimeLeftMilliseconds = null);
@@ -17,6 +17,8 @@ public sealed class DraftObserver(AFKtor.Core.Diagnostics.DiagnosticCollector? d
 {
     private readonly object gate = new();
     private DraftState state = new();
+    private CancellationTokenSource work = new();
+    public CancellationToken WorkToken { get { lock (gate) return work.Token; } }
     private long generation, sequence, armingEpoch;
     private bool enabled, connected, baseline, admitted;
     private long? gameId;
@@ -102,6 +104,14 @@ public sealed class DraftObserver(AFKtor.Core.Diagnostics.DiagnosticCollector? d
 
     private void Publish(DraftState value)
     {
+        if (state.Generation != value.Generation || state.GameId != value.GameId || state.ActionId != value.ActionId || state.Action != value.Action ||
+            state.Admission != value.Admission)
+        {
+            var previous = work;
+            work = new();
+            previous.Cancel();
+            previous.Dispose();
+        }
         state = value;
         diagnostics?.ObserveDraft(value);
 

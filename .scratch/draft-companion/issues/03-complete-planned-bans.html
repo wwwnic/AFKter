@@ -18,7 +18,9 @@
     <h1>03: Complete planned bans while protecting teammate picks</h1>
     <dl>
       <dt>Status</dt>
-      <dd>ready-for-agent</dd>
+      <dd>ready-for-human</dd>
+      <dt>Resolution</dt>
+      <dd>implemented — native installed-client verification pending; shipped draft-write gate remains closed</dd>
       <dt>Blocked by</dt>
       <dd><a href="01-observe-supported-drafts.html">01</a>, <a href="02-edit-and-autosave-role-plans.html">02</a></dd>
     </dl>
@@ -42,6 +44,8 @@
       <h2>Comments</h2>
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Implemented only ticket 03 on isolated <code>feature/planned-bans</code>. Added the live role-plan → ordered eligible ban → final authoritative verification → serialized LCU completion → observed reconciliation → tray/diagnostics path. Protects teammate play intent but not ban hover; both-team banned lists and availability are checked. Manual/ambiguous selections yield for the entire draft without a watchdog. Exhaustion can recover on later edits/eligibility. Default monotonic pacing is 1,000 ms, bypassed at 3,000 ms remaining; final budgets of 250 ms or less do not dispatch. Cancellation covers disarm, disconnect, shutdown and replaced actions/sessions. Request starts share the host plan-publication gate; accepted or ambiguous requests are never blindly repeated.</p>
+      <p>Validation: <code>dotnet test AFKtor.slnx -p:EnableWindowsTargeting=true</code> passed 215/215 tests (25 planned-ban cases). <code>dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true --no-restore</code> passed with zero warnings/errors, SDK 10.0.403. Both enabled and disabled native gates run through simulated HTTP and the monitor. No Windows/installed League evidence exists here, so the shipped internal gate remains explicitly false and status explains why writes are unavailable. Read <a href="../../../docs/planned-bans.md">ban behavior, evidence and remaining native gates</a>. Canonical Status records the human verification need; Resolution records the implemented slice separately. Tickets 04–07 are untouched.</p>
     </section>
   </main>
 </body>
