@@ -24,7 +24,7 @@ public readonly record struct DiagnosticObservation(DiagnosticCode Code, Connect
     long Generation = 0, DiagnosticReason Reason = DiagnosticReason.None);
 public sealed record DiagnosticDetails(ConnectionStage Stage, long Generation, DiagnosticReason Reason,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
-    ControllerDiagnosticEvidence? Controller = null, RolePlanDiagnosticState? RolePlans = null);
+    ControllerDiagnosticEvidence? Controller = null, RolePlanDiagnosticState? RolePlans = null, DraftState? Draft = null);
 public sealed record DiagnosticEvent(int SchemaVersion, Guid RunId, string Build, long Sequence,
     DateTimeOffset Timestamp, double ElapsedMilliseconds, string Code, string Severity, string Source,
     DiagnosticDetails Details, bool Truncated = false);
@@ -37,7 +37,7 @@ public sealed record DiagnosticHealth(string Api, string Discovery, string Stora
 public sealed record DiagnosticState(int SchemaVersion, Guid RunId, string Build, DateTimeOffset StartedAt,
     DateTimeOffset SnapshotAt, long SequenceWatermark, ConnectionDiagnosticState Connection,
     ReadyCheckDiagnosticState ReadyCheck, ArmingDiagnosticState Arming,
-    DelayDiagnosticState Settings, OperationDiagnosticState Operation, DiagnosticHealth Health, RolePlanDiagnosticState? RolePlans = null);
+    DelayDiagnosticState Settings, OperationDiagnosticState Operation, DiagnosticHealth Health, RolePlanDiagnosticState? RolePlans = null, DraftState? Draft = null);
 public sealed record DiagnosticRun(int SchemaVersion, Guid RunId, string Build, DateTimeOffset StartedAt,
     bool IsCurrent, string Persistence);
 public sealed record DiagnosticEventPage(int SchemaVersion, Guid RunId, DiagnosticEvent[] Events,

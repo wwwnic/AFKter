@@ -5,6 +5,10 @@ connection status and automatic reconnection. Ticket 02 adds session-only arming
 and one delayed auto-accept attempt per eligible ready check. Ticket 03 adds
 persisted delay settings and countdown lifecycle handling.
 
+Read-only draft observation now shows queue, assigned role, local action and lifecycle
+admission in the tray and diagnostics. See [observer behavior, API evidence and
+remaining native checks](docs/draft-observer.md). No draft actions are sent.
+
 ## Layout
 
 - Entry point: `src/AFKtor.Tray/Program.cs`.

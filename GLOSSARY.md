@@ -16,6 +16,19 @@ A single request to accept a ready check. Its successful completion does not by 
 **Armed**  
 The state in which the player has enabled auto-accept for the current AFKtor session. A League Client restart preserves this state, and a new AFKtor session starts disarmed.
 
+**Draft**
+The champion-select lifecycle identified by League's game ID, containing planning,
+ban, pick and finalization phases. AFKtor currently observes normal draft pick only.
+
+**Draft admission**
+Evidence that AFKtor observed a new supported draft while enabled on an uninterrupted
+connection. Admission describes lifecycle eligibility; the read-only observer sends
+no draft actions. Enabling or reconnecting during a draft does not admit that draft.
+
+**Assigned role**
+The local player's position supplied by League: top, jungle, middle, bottom or utility.
+An absent or unknown value is never guessed.
+
 **Role plan**
 
 The player's ordered pick and ban priorities for one assigned draft role: Top,
@@ -25,3 +38,4 @@ Jungle, Middle, Bottom, or Support. An empty list means no planned action.
 
 An immutable snapshot of all role plans published after one complete valid edit.
 The effective in-memory revision can be newer than the last saved revision.
+
