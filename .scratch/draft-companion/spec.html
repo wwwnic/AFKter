@@ -13,7 +13,7 @@
 </head>
 <body><main>
   <h1>AFKtor: focused draft companion</h1>
-  <p>Design and ticket breakdown approved · November 7, 2026 · Tickets 01–05 are implemented and reviewed; native acceptance remains pending and draft writes remain gated off. Tickets 06–07 have not started.</p>
+  <p>Design and ticket breakdown approved · November 7, 2026 · Tickets 01–06 are implemented and reviewed; native acceptance remains pending and draft writes remain gated off. Ticket 07 has not started.</p>
 
   <h2>Intent</h2>
   <p>The player prepares a plan, queues in League, and steps away briefly, for example to use the bathroom. AFKtor accepts the ready check and completes supported draft actions according to that plan. Its promise is best-effort execution of the player's choices, not a guarantee of reaching the match when those choices become unavailable.</p>
@@ -77,7 +77,7 @@
     <li>Serialize actions per local action window. Repeated events and rapid edits must not create parallel requests or restart timing indefinitely.</li>
     <li>Show unsaved/error status if persistence fails. Preserve the latest effective in-memory plan and retry saving without silently reverting it.</li>
   </ul>
-  <p>This release extends the original ready-check settings contract: valid live delay edits also re-evaluate an undispatched current countdown from its original detection time. A shorter already-elapsed delay triggers verification; a longer delay moves the deadline without restarting the check. Already skipped checks are not revived. Update the existing documentation and tests that currently capture the delay at detection. This is a proposed consistency decision, not a separately confirmed user choice.</p>
+  <p>This release extends the original ready-check settings contract: valid live delay edits also re-evaluate an undispatched current countdown from its original detection time. A shorter already-elapsed delay triggers verification; a longer delay moves the deadline without restarting the check. Already skipped checks are not revived. Ticket 06 implements and verifies this contract, replacing the original captured-delay behavior in current documentation and tests.</p>
 
   <h2>Architecture and quality requirements</h2>
   <ul>
@@ -102,7 +102,7 @@
   </ul>
 
   <h2>Verification and delivery</h2>
-  <p>See the <a href="ticket-breakdown.html">approved ticket breakdown and index</a>. Seven individual implementation tickets are published with explicit blocker links. Tickets 01–05 are implemented and reviewed; native Windows and installed-League acceptance remain pending. Draft writes remain gated off. Tickets 06–07 have not started. See the <a href="../../docs/reviews/2026-11-08-draft-companion-batch-01.md">two-ticket checkpoint</a> and <a href="../../docs/reviews/2026-11-08-planned-bans-checkpoint.md">ticket 03 checkpoint</a> and <a href="../../docs/reviews/2026-11-08-planned-picks-checkpoint.md">ticket 04 checkpoint</a> and <a href="../../docs/reviews/2026-11-08-manual-pick-policy-checkpoint.md">ticket 05 checkpoint</a>.</p>
+  <p>See the <a href="ticket-breakdown.html">approved ticket breakdown and index</a>. Seven individual implementation tickets are published with explicit blocker links. Tickets 01–06 are implemented and reviewed; native Windows and installed-League acceptance remain pending. Draft writes remain gated off. Ticket 07 has not started. See the <a href="../../docs/reviews/2026-11-08-draft-companion-batch-01.md">two-ticket checkpoint</a> and <a href="../../docs/reviews/2026-11-08-planned-bans-checkpoint.md">ticket 03 checkpoint</a> and <a href="../../docs/reviews/2026-11-08-planned-picks-checkpoint.md">ticket 04 checkpoint</a> and <a href="../../docs/reviews/2026-11-08-manual-pick-policy-checkpoint.md">ticket 05 checkpoint</a> and <a href="../../docs/reviews/2026-11-08-live-timing-checkpoint.md">ticket 06 checkpoint</a>.</p>
   <p>Deliver in increments: read-only draft observation and replay fixtures; role plans and live autosave; ban execution; pick/lock/watchdog execution; integrated Windows acceptance. Each increment must preserve ready-check behavior except for the explicitly reviewed live-settings extension.</p>
   <ul>
     <li>Deterministic tests: all roles; ordered fallback; exhausted plans; teammate pick intent changing before ban dispatch; competing bans; duplicate and out-of-order events; session replacement.</li>
