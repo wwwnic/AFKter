@@ -35,7 +35,9 @@ Polling may miss very brief transitions. A future executor requires current
 final verification and cannot treat this sampled timer as a dispatch deadline.
 
 Supported observation admission is normal Summoner's Rift Draft Pick queue 400,
-with assigned `top`, `jungle`, `middle`, `bottom`, or `utility` role. Unknown role,
+with assigned `top`, `jungle`, `middle`, `bottom`, or `utility` role. LCU
+`utility` maps to the editor’s `Support` role; unknown roles are null in the
+projection and display as Unknown in the tray. Unknown role,
 other queue, custom/spectator mode, infinite/invalid timer or ambiguous local
 window cannot gain action admission. The local action is selected by
 `actorCellId == localPlayerCellId`, `isInProgress`, and `!completed`; identity is

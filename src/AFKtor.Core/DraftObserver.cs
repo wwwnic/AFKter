@@ -2,15 +2,14 @@ using System.Collections.Immutable;
 
 namespace AFKtor.Core;
 
-public enum DraftRole { Unknown, Top, Jungle, Middle, Bottom, Utility }
 public enum DraftAdmission { Disconnected, Ended, Disarmed, MidDraft, UnsupportedQueue, UnknownRole, InsufficientState, Admitted }
 public enum DraftActionKind { None, Pick, Ban }
 public sealed record DraftAction(long Id, long ActorCellId, DraftActionKind Kind, int ChampionId, bool InProgress, bool Completed);
-public sealed record DraftPlayer(long CellId, DraftRole Role, int ChampionId, int PickIntent);
+public sealed record DraftPlayer(long CellId, DraftRole? Role, int ChampionId, int PickIntent);
 public sealed record DraftSnapshot(long GameId, int QueueId, long LocalCellId, ImmutableArray<DraftPlayer> Players,
     ImmutableArray<DraftAction> Actions, long TimeLeftMilliseconds, bool Infinite = false, bool Custom = false, bool Spectating = false);
 public sealed record DraftState(long Generation = 0, long Sequence = 0, long? GameId = null,
-    int? QueueId = null, DraftRole Role = DraftRole.Unknown, DraftAdmission Admission = DraftAdmission.Disconnected,
+    int? QueueId = null, DraftRole? Role = null, DraftAdmission Admission = DraftAdmission.Disconnected,
     long? ActionId = null, DraftActionKind Action = DraftActionKind.None, long? TimeLeftMilliseconds = null);
 
 /// <summary>Read-only draft lifecycle projection. Inputs must be fresh authoritative reads.</summary>
@@ -74,13 +73,13 @@ public sealed class DraftObserver(AFKtor.Core.Diagnostics.DiagnosticCollector? d
             }
             baseline = true;
             var locals = snapshot.Players.Where(p => p.CellId == snapshot.LocalCellId).ToArray();
-            var role = locals.Length == 1 ? locals[0].Role : DraftRole.Unknown;
+            var role = locals.Length == 1 ? locals[0].Role : null;
             var actions = snapshot.Actions.Where(a => a.ActorCellId == snapshot.LocalCellId && a.InProgress && !a.Completed).ToArray();
             var action = actions.Length == 1 ? actions[0] : null;
             var admission = snapshot.GameId <= 0 || actions.Length > 1 || snapshot.Infinite || snapshot.TimeLeftMilliseconds < 0
                 ? DraftAdmission.InsufficientState
                 : snapshot.QueueId != 400 || snapshot.Custom || snapshot.Spectating ? DraftAdmission.UnsupportedQueue
-                : role == DraftRole.Unknown ? DraftAdmission.UnknownRole
+                : role is null ? DraftAdmission.UnknownRole
                 : !enabled ? DraftAdmission.Disarmed : !admitted ? DraftAdmission.MidDraft : DraftAdmission.Admitted;
             Publish(new(generation, sequence, snapshot.GameId, snapshot.QueueId, role, admission,
                 action?.Id, action?.Kind ?? DraftActionKind.None, snapshot.Infinite ? null : snapshot.TimeLeftMilliseconds));

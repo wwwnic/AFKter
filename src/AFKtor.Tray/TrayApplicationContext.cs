@@ -125,7 +125,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         if (stopping.IsCancellationRequested) { return; }
         status.Text = monitor.IsConnected ? "League: Connected" : "League: Disconnected";
         var draft = draftObserver.State;
-        draftStatus.Text = $"Draft: {draft.Admission} — queue {draft.QueueId?.ToString() ?? "?"} — {draft.Role} — {draft.Action}" +
+        draftStatus.Text = $"Draft: {draft.Admission} — queue {draft.QueueId?.ToString() ?? "?"} — {draft.Role?.ToString() ?? "Unknown"} — {draft.Action}" +
             (draft.ActionId is { } actionId ? $" #{actionId}" : "") +
             (draft.TimeLeftMilliseconds is { } milliseconds ? $" ({milliseconds / 1000.0:0.0}s observed)" : "") +
             " — read only";

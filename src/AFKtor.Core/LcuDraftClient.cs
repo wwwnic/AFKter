@@ -77,9 +77,9 @@ public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) 
         { throw new InvalidDataException("Malformed draft state."); }
     }
 
-    private static DraftRole ParseRole(string? value) => value switch
+    private static DraftRole? ParseRole(string? value) => value switch
     {
         "top" => DraftRole.Top, "jungle" => DraftRole.Jungle, "middle" => DraftRole.Middle,
-        "bottom" => DraftRole.Bottom, "utility" => DraftRole.Utility, _ => DraftRole.Unknown
+        "bottom" => DraftRole.Bottom, "utility" => DraftRole.Support, _ => null
     };
 }

@@ -5,7 +5,7 @@ namespace AFKtor.Tests;
 
 public sealed class DraftObserverTests
 {
-    internal static DraftSnapshot Draft(long id = 101, int queue = 400, DraftRole role = DraftRole.Middle,
+    internal static DraftSnapshot Draft(long id = 101, int queue = 400, DraftRole? role = DraftRole.Middle,
         DraftActionKind kind = DraftActionKind.Ban, long remaining = 28000) => new(id, queue, 2,
         [new(2, role, 0, 103), new(3, DraftRole.Top, 0, 86)],
         [new(11, 2, kind, 0, true, false), new(12, 3, DraftActionKind.Ban, 86, true, false)], remaining);
@@ -45,7 +45,7 @@ public sealed class DraftObserverTests
 
     // Catches treating a first draft after an authoritative idle baseline as a reconnect baseline.
     [TestCase(DraftRole.Top)] [TestCase(DraftRole.Jungle)] [TestCase(DraftRole.Middle)]
-    [TestCase(DraftRole.Bottom)] [TestCase(DraftRole.Utility)]
+    [TestCase(DraftRole.Bottom)] [TestCase(DraftRole.Support)]
     public void IdleBaselineAdmitsEveryAssignedRole(DraftRole role)
     {
         var observer = new DraftObserver();
@@ -86,8 +86,8 @@ public sealed class DraftObserverTests
 
     [TestCase(420, DraftRole.Middle, DraftAdmission.UnsupportedQueue)]
     [TestCase(430, DraftRole.Middle, DraftAdmission.UnsupportedQueue)]
-    [TestCase(400, DraftRole.Unknown, DraftAdmission.UnknownRole)]
-    public void UnsupportedInputsRemainVisibleWithoutAdmission(int queue, DraftRole role, DraftAdmission expected)
+    [TestCase(400, null, DraftAdmission.UnknownRole)]
+    public void UnsupportedInputsRemainVisibleWithoutAdmission(int queue, DraftRole? role, DraftAdmission expected)
     {
         var observer = new DraftObserver();
         observer.SetEnabled(true);
