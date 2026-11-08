@@ -46,8 +46,17 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
             if (draft != identity)
             { draft = identity; actionId = null; manual = pending = locking = false; acknowledged = expected = 0; outcome = null; }
             var localPicks = snapshot.Actions.Where(a => a.ActorCellId == snapshot.LocalCellId && a.Kind == DraftActionKind.Pick).ToArray();
-            if (localPicks.Any(a => a.Completed))
-            { Publish(State with { Status = PickStatus.Completed, GameId = snapshot.GameId }); return; }
+            if (localPicks.FirstOrDefault(a => a.Completed) is { } completed)
+            {
+                var ownSelection = actionId == completed.Id && completed.ChampionId > 0 &&
+                    (pending && outcome == BanRequestOutcome.Accepted && expected == completed.ChampionId ||
+                     acknowledged == completed.ChampionId);
+                manual |= !ownSelection;
+                pending = false; acknowledged = completed.ChampionId; actionId = completed.Id;
+                Publish(new(PickStatus.Completed, admission.Generation, snapshot.GameId, completed.Id,
+                    plans().Revision, completed.ChampionId, manual, Lock: true, Outcome: outcome));
+                return;
+            }
             var active = LocalPick(snapshot);
             if (active is null) { Publish(State with { Status = PickStatus.Idle }); return; }
             if (admission.ActionId != active.Id || admission.Action != DraftActionKind.Pick)
@@ -82,12 +91,15 @@ public sealed class PlannedPickExecutor(DraftObserver observer, Func<RolePlanRev
                     verified.QueueId != 400 || verified.Custom || verified.Spectating || verified.Infinite ||
                     verified.LocalCellId != snapshot.LocalCellId || verifiedAction?.Id != active.Id ||
                     verified.Players.Count(p => p.CellId == verified.LocalCellId) != 1 ||
-                    verified.Players.Single(p => p.CellId == verified.LocalCellId).Role != admission.Role ||
-                    Math.Min(Remaining(verified), verified.TimeLeftMilliseconds - clock.GetElapsedTime(verificationStarted).TotalMilliseconds) <= 250)
+                    verified.Players.Single(p => p.CellId == verified.LocalCellId).Role != admission.Role)
                 { Publish(State with { Status = PickStatus.Cancelled }); return; }
+                // Every valid same-action observation constrains future polls, even when this pass cannot dispatch.
+                deadline = Math.Min(deadline, Elapsed + verified.TimeLeftMilliseconds - clock.GetElapsedTime(verificationStarted).TotalMilliseconds);
+                remaining = Remaining(verified);
+                if (remaining <= 250)
+                { Publish(State with { Status = PickStatus.Cancelled, RemainingMilliseconds = remaining }); return; }
                 Reconcile(verifiedAction!);
                 if (pending) return;
-                remaining = Math.Min(Remaining(verified), verified.TimeLeftMilliseconds - clock.GetElapsedTime(verificationStarted).TotalMilliseconds);
                 var revision = plans();
                 var skipped = new List<PickSkip>();
                 int? candidate = null;

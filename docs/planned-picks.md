@@ -29,7 +29,9 @@ These fixed defaults use the same observed millisecond timer and urgent/minimum
 margins as planned bans. They are initial engineering values, not measured League
 latencies. The action's monotonic deadline can only shorten: repeated observations,
 a supplied timer reset, and edits cannot extend it. Verification latency is
-subtracted from the final supplied timer as well. The host polls every two seconds;
+subtracted from the final supplied timer as well. Every identity-validated final
+read persists its shorter deadline, including expiry and exhausted-plan exits;
+a later timer reset cannot revive that action. The host polls every two seconds;
 execution and watchdog scheduling are best effort and can miss short windows.
 Native acceptance must assess whether that cadence is adequate before enabling
 writes; these constants do not claim real-time guarantees or expose new settings.
@@ -37,8 +39,10 @@ writes; these constants do not claim real-time guarantees or expose new settings
 Only one request can be in flight per executor. HTTP success means
 `AwaitingOutcome`, not completion. A matching incomplete hover after an accepted
 request is an own acknowledgment; matching intermediate accepted lock selections
-also do not cause takeover. A matching completed local pick establishes completion
-and is never changed. Rejected, failed and ambiguous requests are not blindly
+also do not cause takeover. An observed completed local pick establishes completion
+and is never changed. Status and diagnostics publish that action and actual champion;
+a differing champion or completion without own accepted selection evidence yields
+manual attribution. Rejected, failed and ambiguous requests are not blindly
 repeated. An unresolved sent lock remains pending until observation, even if the
 player changes hover. A sent hover with a matching ambiguous/rejected acknowledgment
 yields manual control; a different observed champion also yields. No second
@@ -93,5 +97,13 @@ HTTP tests exercise both enabled and disabled gates, ordered eligibility, pacing
 urgent completion, own acknowledgments, takeover, watchdog, live edits, bounded
 evidence, cancellation and request serialization. Native acceptance remains pending.
 
-- `dotnet test AFKtor.slnx -p:EnableWindowsTargeting=true`: **249/249 passed** (215 baseline plus 34 pick/parser cases).
+- `dotnet test AFKtor.slnx -c Release -p:EnableWindowsTargeting=true`: **255/255 passed** (249 baseline plus six review regression cases).
 - `dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true --no-restore`: passed with **zero warnings/errors**.
+
+November 8, 2026 review follow-up: six deterministic regression cases failed
+against the original implementation before the fixes. Three cover final-read
+expiry/exhaustion and verification latency followed by a supplied timer reset.
+Three cover completion before any write, a different completed champion after an
+own hover, and a matching own completion. They verify no later writes, actual
+champion/action and conservative manual attribution in shared tray state,
+diagnostics state and `draft.pick` history. Native acceptance remains pending.

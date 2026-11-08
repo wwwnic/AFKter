@@ -227,6 +227,63 @@ public sealed class PlannedPickTests
         Assert.That(client.Writes, Has.Count.EqualTo(1));
     }
 
+    // Catches losing a shorter final-read deadline on expiry/exhaustion, including verification latency.
+    [TestCase(100, 0, 2000)]
+    [TestCase(1000, 0, 2000)]
+    [TestCase(1000, 400, 700)]
+    public async Task FinalReadDeadlineCannotBeRevivedByLaterTimerReset(long finalTimer, int readLatency, int laterElapsed)
+    {
+        var clock = new PlannedBanTests.Clock(); var client = new Client { Available = [] };
+        var picks = new PlannedPickExecutor(Observer(), () => Plan(1), true, clock);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        clock.Advance(1000);
+        client.OnRead = () => {
+            clock.Advance(readLatency);
+            client.Snapshot = client.Snapshot with { TimeLeftMilliseconds = finalTimer };
+        };
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(picks.State.Status, Is.EqualTo(finalTimer <= 250 ? PickStatus.Cancelled : PickStatus.Exhausted));
+        Assert.That(client.Writes, Is.Empty);
+
+        client.OnRead = null; client.Available = [1];
+        client.Snapshot = client.Snapshot with { TimeLeftMilliseconds = 28000 };
+        clock.Advance(laterElapsed);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        Assert.That(client.Writes, Is.Empty, "An authoritative final-read deadline remains expired after a reset.");
+        Assert.That(picks.State.Status, Is.EqualTo(PickStatus.Cancelled));
+        Assert.That(picks.State.RemainingMilliseconds, Is.LessThanOrEqualTo(250));
+    }
+
+    // Catches stale automatic selection/action evidence after an observed completion, including before any write.
+    [TestCase(false, 86, true)]
+    [TestCase(true, 86, true)]
+    [TestCase(true, 1, false)]
+    public async Task CompletedObservationPublishesActualPickWithoutAnotherWrite(bool ownHover, int champion, bool manual)
+    {
+        await using var diagnostics = new AFKtor.Core.Diagnostics.DiagnosticCollector();
+        var clock = new PlannedBanTests.Clock(); var client = new Client();
+        var picks = new PlannedPickExecutor(Observer(), () => Plan(1), true, clock, diagnostics);
+        if (ownHover)
+        {
+            await picks.RefreshAsync(client, client.Snapshot, default);
+            clock.Advance(1000);
+            await picks.RefreshAsync(client, client.Snapshot, default);
+        }
+        client.Snapshot = client.Snapshot with
+        { Actions = [new(ownHover ? 11 : 19, 2, DraftActionKind.Pick, champion, false, true)] };
+        await picks.RefreshAsync(client, client.Snapshot, default);
+        await picks.RefreshAsync(client, client.Snapshot, default);
+
+        Assert.That(client.Writes, Has.Count.EqualTo(ownHover ? 1 : 0));
+        Assert.That(picks.State.Status, Is.EqualTo(PickStatus.Completed));
+        Assert.That(picks.State.ChampionId, Is.EqualTo(champion));
+        Assert.That(picks.State.ActionId, Is.EqualTo(ownHover ? 11 : 19));
+        Assert.That(picks.State.Manual, Is.EqualTo(manual));
+        Assert.That(picks.State.Lock, Is.True);
+        Assert.That(diagnostics.GetState().Pick, Is.EqualTo(picks.State));
+        Assert.That(diagnostics.GetMemoryHistory().Events.Last(e => e.Code == "draft.pick").Details.Pick, Is.EqualTo(picks.State));
+    }
+
     internal static RolePlanRevision Plan(params int[] ids) => new(1, RolePlanRevision.Empty.Roles.SetItem(DraftRole.Middle, new([..ids], [])));
     internal static DraftSnapshot Snapshot(long remaining = 28000) => DraftObserverTests.Draft(remaining: remaining) with
     { Actions = [new(11, 2, DraftActionKind.Pick, 0, true, false)] };
