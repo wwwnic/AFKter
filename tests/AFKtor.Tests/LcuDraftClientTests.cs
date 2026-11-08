@@ -25,6 +25,15 @@ public sealed class LcuDraftClientTests
         });
     }
 
+    // Catches omitting an opponent's selected champion when actions no longer contain its completed pick.
+    [Test]
+    public void ParsesOpponentSelectedChampionsForPickEligibility()
+    {
+        var json = System.Text.Json.Nodes.JsonNode.Parse(Ban)!;
+        json["theirTeam"] = System.Text.Json.Nodes.JsonNode.Parse("[{\"cellId\":7,\"assignedPosition\":\"middle\",\"championId\":86,\"championPickIntent\":0}]");
+        Assert.That(LcuDraftClient.Parse(Flow, json.ToJsonString()).EnemyPicks, Is.EqualTo(new[] { 86 }));
+    }
+
     [TestCase("{}")]
     [TestCase("{\"gameId\":101}")]
     [TestCase("not json")]

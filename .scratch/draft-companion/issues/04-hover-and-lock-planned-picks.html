@@ -18,7 +18,9 @@
     <h1>04: Hover and lock planned picks, respecting manual takeover</h1>
     <dl>
       <dt>Status</dt>
-      <dd>ready-for-agent</dd>
+      <dd>ready-for-human</dd>
+      <dt>Resolution</dt>
+      <dd>Implemented; native Windows and installed-League acceptance pending. Shipped draft-write gate remains closed.</dd>
       <dt>Blocked by</dt>
       <dd><a href="01-observe-supported-drafts.html">01</a>, <a href="02-edit-and-autosave-role-plans.html">02</a></dd>
     </dl>
@@ -42,6 +44,8 @@
       <h2>Comments</h2>
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Implemented ticket 04 only: serialized ordered pick hover/lock, latest-plan replacement after own acknowledgment, whole-draft manual takeover, and default watchdog locking only the current eligible hover. No policy UI or timing settings were added. Normal hover and lock waits are 1,000 ms each; urgent completion/watchdog margin is 3,000 ms and minimum verified budget is 250 ms. Monotonic deadlines never extend on observations or edits. Read <a href="../../../docs/planned-picks.md">behavior, reference evidence, race limitations and remaining native gates</a>. Both shipped tray gates remain explicitly false.</p>
+      <p>Validation: SDK 10.0.403, <code>dotnet test AFKtor.slnx -p:EnableWindowsTargeting=true</code> passed 249/249 tests (215 baseline plus 34 pick/parser cases). <code>dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true --no-restore</code> passed with zero warnings/errors. Deterministic tests cover own/ambiguous acknowledgments, manual/exhausted/invalid hover, both teams' eligibility, live revisions, late final reads, deadline latency, stale queued action lifetimes and serialized in-flight requests. Native Windows/League execution is unavailable; Status records the human acceptance need separately from Resolution. Tickets 05–07 remain unimplemented.</p>
     </section>
   </main>
 </body>

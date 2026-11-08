@@ -10,7 +10,7 @@ public interface IDraftClient
 }
 
 /// <summary>Read-only, coherent HTTP snapshots; event payloads never establish admission.</summary>
-public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) : IBanDraftClient
+public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) : IBanDraftClient, IPickDraftClient
 {
     public async Task<DraftSnapshot?> ReadAsync(CancellationToken cancellationToken)
     {
@@ -35,12 +35,30 @@ public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) 
         catch (JsonException) { throw new InvalidDataException("Malformed bannable champions."); }
     }
 
-    public async Task<BanRequestOutcome> CompleteBanAsync(long actionId, int championId, CancellationToken cancellationToken)
+    public async Task<IReadOnlySet<int>> ReadPickableAsync(CancellationToken cancellationToken)
+    {
+        var json = await ReadJsonAsync("/lol-champ-select/v1/pickable-champion-ids", cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var ids = JsonSerializer.Deserialize<int[]>(json);
+            if (ids is null || ids.Length > 1000 || ids.Any(id => id <= 0)) throw new InvalidDataException("Invalid pickable champions.");
+            return ids.ToHashSet();
+        }
+        catch (JsonException) { throw new InvalidDataException("Malformed pickable champions."); }
+    }
+
+    public Task<BanRequestOutcome> PickAsync(long actionId, int championId, bool completed, CancellationToken cancellationToken)
+        => PatchActionAsync(actionId, championId, completed, cancellationToken);
+
+    public Task<BanRequestOutcome> CompleteBanAsync(long actionId, int championId, CancellationToken cancellationToken)
+        => PatchActionAsync(actionId, championId, true, cancellationToken);
+
+    private async Task<BanRequestOutcome> PatchActionAsync(long actionId, int championId, bool completed, CancellationToken cancellationToken)
     {
         if (actionId < 0 || championId <= 0) throw new ArgumentOutOfRangeException(nameof(actionId));
         using var request = new HttpRequestMessage(HttpMethod.Patch, connection.Endpoint($"/lol-champ-select/v1/session/actions/{actionId}"));
         request.Headers.Authorization = connection.Authorization;
-        request.Content = JsonContent.Create(new { championId, completed = true });
+        request.Content = JsonContent.Create(new { championId, completed });
         try
         {
             using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
@@ -100,6 +118,8 @@ public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) 
             if (players.Length > 10 || actions.Length > 50 || players.Select(p => p.CellId).Distinct().Count() != players.Length ||
                 actions.Any(a => a.Id < 0 || a.Kind == DraftActionKind.None) || actions.Select(a => a.Id).Distinct().Count() != actions.Length)
                 throw new InvalidDataException("Invalid draft members or actions.");
+            var enemyPicks = root.GetProperty("theirTeam").EnumerateArray().Select(p => p.GetProperty("championId").GetInt32()).Where(id => id > 0).ToImmutableArray();
+            if (enemyPicks.Length > 10) throw new InvalidDataException("Invalid enemy picks.");
             var bans = root.GetProperty("bans");
             var banned = bans.GetProperty("myTeamBans").EnumerateArray().Concat(bans.GetProperty("theirTeamBans").EnumerateArray())
                 .Select(b => b.GetInt32()).Where(id => id > 0).ToImmutableArray();
@@ -107,7 +127,7 @@ public sealed class LcuDraftClient(LcuConnection connection, HttpClient client) 
             var timer = root.GetProperty("timer");
             return new(id, flow.QueueId, root.GetProperty("localPlayerCellId").GetInt64(), players, actions,
                 timer.GetProperty("adjustedTimeLeftInPhase").GetInt64(), timer.GetProperty("isInfinite").GetBoolean(),
-                root.GetProperty("isCustomGame").GetBoolean(), root.GetProperty("isSpectating").GetBoolean(), banned);
+                root.GetProperty("isCustomGame").GetBoolean(), root.GetProperty("isSpectating").GetBoolean(), banned, enemyPicks);
         }
         catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
         { throw new InvalidDataException("Malformed draft state."); }
