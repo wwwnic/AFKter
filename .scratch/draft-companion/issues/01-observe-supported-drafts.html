@@ -18,7 +18,9 @@
     <h1>01: Observe supported drafts without taking action</h1>
     <dl>
       <dt>Status</dt>
-      <dd>ready-for-agent</dd>
+      <dd>ready-for-human</dd>
+      <dt>Implementation state</dt>
+      <dd>resolved — read-only slice implemented; native verification pending</dd>
       <dt>Blocked by</dt>
       <dd>None</dd>
     </dl>
@@ -41,6 +43,8 @@
       <h2>Comments</h2>
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-07">November 7, 2026</time>: Published after approval of the seven-ticket breakdown. Implementation has not started.</p>
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Implemented read-only draft observation on <code>feature/draft-observer</code>: immutable role/action inputs, serialized authenticated GET snapshots, conservative fresh-state admission, reconnect/disarm/shutdown invalidation, tray status, and bounded diagnostic state/events. No draft write route exists. Ready-check behavior is preserved. <a href="../../../docs/draft-observer.md">Behavior, source hashes, replay provenance and exact native gates</a> record the evidence and limitations.</p>
+      <p><time datetime="2026-11-08">November 8, 2026</time>: TDD: observed failing tests before implementing lifecycle, parser/HTTP, monitor shutdown and diagnostic projection, including the enable-after-idle race. Full suite: 172 passed, zero skipped; Release cross-build with <code>-p:EnableWindowsTargeting=true</code>: zero warnings/errors. Installed Windows/League checks were unavailable: queue/role/action/timer/lifecycle semantics must still be checked on the installed client and tray behavior inspected on Windows. Status is <code>ready-for-human</code> for those native gates; the implementation state is resolved, not a claim of live readiness.</p>
     </section>
   </main>
 </body>

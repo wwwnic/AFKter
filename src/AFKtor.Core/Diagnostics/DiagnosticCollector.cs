@@ -19,6 +19,7 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
     private string? failure;
     private DiagnosticPersistenceStatus? persistence;
     private ControllerDiagnosticEvidence? controller;
+    private DraftState? draft;
     private long controllerCapturedAt;
     private ConnectionDiagnosticState connection = new(ConnectionStage.Unknown, 0, DiagnosticReason.None, null, null);
     public Guid RunId { get; } = Guid.NewGuid();
@@ -135,11 +136,33 @@ public sealed class DiagnosticCollector : IAsyncDisposable, IDiagnosticHistory
         finally { Monitor.Exit(gate); }
     }
 
+    internal void ObserveDraft(DraftState value)
+    {
+        if (Volatile.Read(ref stopped) != 0) return;
+        if (!Monitor.TryEnter(gate)) { Interlocked.Increment(ref producerDropped); return; }
+        try
+        {
+            if (stopped != 0 || draft == value) return;
+            draft = value;
+            var record = new DiagnosticEvent(1, RunId, Build, ++sequence, DateTimeOffset.UtcNow,
+                Stopwatch.GetElapsedTime(startedTimestamp).TotalMilliseconds, "draft.observed", "information", "draft",
+                new(ConnectionStage.Unknown, value.Generation, DiagnosticReason.None, Draft: value));
+            if (events.Count == DiagnosticLimits.MemoryEvents) { events.Dequeue(); evicted++; }
+            events.Enqueue(record);
+            if (queue is not null)
+            {
+                Interlocked.Increment(ref queueDepth);
+                if (!queue.Writer.TryWrite(record)) { Interlocked.Decrement(ref queueDepth); Interlocked.Increment(ref sinkDropped); }
+            }
+        }
+        finally { Monitor.Exit(gate); }
+    }
+
     public DiagnosticState GetState()
     {
         lock (gate) return new(1, RunId, Build, StartedAt, DateTimeOffset.UtcNow, sequence, connection, controller?.ReadyCheck ?? new(), controller?.Arming ?? new(), controller?.Settings ?? new(), CurrentOperation(),
             new(Volatile.Read(ref api), Volatile.Read(ref discovery), Volatile.Read(ref storage), Volatile.Read(ref queueDepth),
-                Interlocked.Read(ref producerDropped), Interlocked.Read(ref sinkDropped), evicted, Volatile.Read(ref persistence)?.Truncated ?? 0, Volatile.Read(ref failure), Volatile.Read(ref persistence)));
+                Interlocked.Read(ref producerDropped), Interlocked.Read(ref sinkDropped), evicted, Volatile.Read(ref persistence)?.Truncated ?? 0, Volatile.Read(ref failure), Volatile.Read(ref persistence)), draft);
     }
 
     private OperationDiagnosticState CurrentOperation()

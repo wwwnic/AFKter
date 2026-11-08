@@ -14,6 +14,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly AcceptDelaySettingsStore settingsStore = new(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "settings.json"));
     private readonly ReadyCheckSessionMonitor monitor;
+    private readonly DraftObserver draftObserver;
+    private readonly DraftSessionMonitor draftMonitor;
+    private readonly ToolStripMenuItem draftStatus = new("Draft: Disconnected") { Enabled = false };
     private readonly ToolStripMenuItem status = new("League: Disconnected") { Enabled = false };
     private readonly ToolStripMenuItem autoAcceptStatus = new("Auto-accept: Disarmed") { Enabled = false };
     private readonly ToolStripMenuItem arm = new("Arm auto-accept") { CheckOnClick = true };
@@ -41,13 +44,19 @@ internal sealed class TrayApplicationContext : ApplicationContext
         monitor = new ReadyCheckSessionMonitor(async token =>
             LcuConnection.Parse(await LeagueClientDiscovery.ReadLockfileAsync(token)),
             connection => new LcuReadyCheckClient(connection, client), controller, diagnostics.Collector);
+        draftObserver = new DraftObserver(diagnostics.Collector);
+        draftMonitor = new DraftSessionMonitor(async token =>
+            LcuConnection.Parse(await LeagueClientDiscovery.ReadLockfileAsync(token)),
+            connection => new LcuDraftClient(connection, client), draftObserver);
         arm.CheckedChanged += (_, _) =>
         {
             controller.SetArmed(arm.Checked);
+            draftObserver.SetEnabled(arm.Checked);
             RenderStatus();
         };
         menu.Items.Add(status);
         menu.Items.Add(autoAcceptStatus);
+        menu.Items.Add(draftStatus);
         menu.Items.Add(arm);
         settings.Click += (_, _) => ShowSettings();
         menu.Items.Add(settings);
@@ -97,6 +106,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         if (stopping.IsCancellationRequested) { return; }
         status.Text = monitor.IsConnected ? "League: Connected" : "League: Disconnected";
+        var draft = draftObserver.State;
+        draftStatus.Text = $"Draft: {draft.Admission} — queue {draft.QueueId?.ToString() ?? "?"} — {draft.Role} — {draft.Action}" +
+            (draft.ActionId is { } actionId ? $" #{actionId}" : "") +
+            (draft.TimeLeftMilliseconds is { } milliseconds ? $" ({milliseconds / 1000.0:0.0}s observed)" : "") +
+            " — read only";
         var remaining = controller.Remaining;
         autoAcceptStatus.Text = remaining is { } time && time > TimeSpan.Zero
             ? $"Auto-accept: accepting in {time.TotalSeconds:0.0}s"
@@ -107,7 +121,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private async Task RefreshAsync()
     {
-        try { await monitor.RefreshAsync(stopping.Token); }
+        try
+        {
+            await Task.WhenAll(monitor.RefreshAsync(stopping.Token), draftMonitor.RefreshAsync(stopping.Token));
+        }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
     }
 
@@ -122,7 +139,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         stopping.Cancel();
         icon.Visible = false;
         // Stop invalidates the controller immediately, then drains HTTP/event work.
-        await monitor.StopAsync();
+        await Task.WhenAll(monitor.StopAsync(), draftMonitor.StopAsync());
         await refresh;
         ExitThread();
     }
@@ -137,6 +154,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             settingsForm?.Dispose();
             // Core teardown never captures the UI context, including on OS exit.
             monitor.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            draftMonitor.DisposeAsync().AsTask().GetAwaiter().GetResult();
             controller.DisposeAsync().AsTask().GetAwaiter().GetResult();
             diagnostics.DisposeAsync().AsTask().GetAwaiter().GetResult();
             icon.Dispose();
