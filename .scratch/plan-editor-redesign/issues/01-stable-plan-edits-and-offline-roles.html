@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>01: Edit plans by champion identity and browse offline roles</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>01: Edit plans by champion identity and browse offline roles</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>needs-triage</dd>
+      <dt>Blocked by</dt>
+      <dd>None</dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Provide the domain operations and offline role data needed by the new editor, preserving existing plans, policy, timing and autosave.</p>
+      <p>Source: <a href="../spec.html">approved design</a> · <a href="../../../docs/superpowers/plans/2026-11-08-avalonia-champion-editor.md">implementation plan</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Insert, reorder and remove use stable champion identity against the current list. A completed edit publishes one coherent revision; stale, invalid, unchanged and duplicate operations do not publish partial changes.</li>
+        <li>Copying to another role or pick/ban list preserves the source. Duplicate destinations identify their existing entry without changing order. Missing reorder sources or insertion anchors are rejected safely.</li>
+        <li>Bundle role metadata from the user-owned reference, translate role names correctly, preserve attribution, and verify coverage of all 173 current champion IDs and 281 memberships.</li>
+        <li>Missing or invalid role metadata does not corrupt plans or identity browsing. Unmapped champions remain available under All/search, and filters never restrict plan choices.</li>
+        <li>Focused behavioral tests and the existing core suite verify revision, settings, recovery and persistence compatibility.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Drafted from the approved design. Implementation-plan review is pending; needs-triage records that planning state. No implementation has started.</p>
+    </section>
+  </main>
+</body>
+</html>

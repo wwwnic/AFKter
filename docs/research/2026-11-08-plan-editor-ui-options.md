@@ -1,6 +1,6 @@
 # Champion-plan UI: two independent architecture reviews
 
-November 8, 2026. Independent research record. The player subsequently selected Avalonia; see [ADR 0002](../adr/0002-avalonia-for-plan-editor.md). Only a separate throwaway interaction prototype is authorized; production implementation remains pending.
+November 8, 2026. Independent research record. The player subsequently selected Avalonia; see [ADR 0002](../adr/0002-avalonia-for-plan-editor.md). A throwaway interaction prototype was authorized first. The player subsequently approved the unified-shell production design; its implementation plan and task decomposition are awaiting review before execution.
 The player requested two fresh-context researchers who were not told any prior
 candidate stack or recommendation. Both were supplied the agreed product goals,
 existing .NET core, Windows target, Linux development workflow, offline editing,
@@ -69,4 +69,4 @@ long-term architecture and accepts additional initial work. Compare actual catal
 browsing, drag/drop feedback, keyboard editing and five-role layout before approving
 implementation. Keep the existing C# core and save format. A unified Avalonia host
 is the leading long-term proposal; preserve current behavior during any host change.
-The player subsequently selected Avalonia, recorded in ADR 0002. The final layout and production host integration still require a design decision; the throwaway preview does not replace the existing app.
+The player subsequently selected Avalonia, recorded in ADR 0002. The player subsequently approved the unified-host production design; implementation-plan review is pending. The throwaway preview does not replace the existing app.

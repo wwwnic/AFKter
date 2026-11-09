@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>02: Browse and edit plans in the real Avalonia workspace</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>02: Browse and edit plans in the real Avalonia workspace</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>needs-triage</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="01-stable-plan-edits-and-offline-roles.html">01</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Deliver the shared production editor views and a runnable isolated preview, with all five roles, an always-browseable catalog, and straightforward click/keyboard editing.</p>
+      <p>Source: <a href="../spec.html">approved design</a> · <a href="../../../docs/superpowers/plans/2026-11-08-avalonia-champion-editor.md">implementation plan</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Show five labeled role rows with ranked picks/bans, visible names, a persistent alphabetic catalog, partial-name search and optional role filtering. Blank search supports discovery immediately.</li>
+        <li>Clearly highlight the selected destination. Catalog clicks append there; duplicates reveal their existing entry. Earlier/Later/Remove and keyboard alternatives use the same domain operations.</li>
+        <li>Search/filter/destination and stable selection survive presentation refresh. Catalog role filters do not reset when the plan destination changes.</li>
+        <li>Show truthful Saved/Saving/unsaved failure status with Retry. Effective plans remain visible through failure, and ordinary users are not shown technical revision numbers.</li>
+        <li>The Linux preview runs actual shared views against isolated sample/local data without League discovery or production profile access. No image download, browser runtime or paid UI component is required.</li>
+        <li>View-model/headless tests and a native Linux preview check cover discovery, invalid role metadata, duplicate selection, resize/overflow, focused input and save recovery.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Drafted from the approved design. Implementation-plan review is pending; needs-triage records that planning state. No implementation has started.</p>
+    </section>
+  </main>
+</body>
+</html>

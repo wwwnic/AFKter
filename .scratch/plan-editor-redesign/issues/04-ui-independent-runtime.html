@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>04: Separate monitoring lifetime from window lifetime</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>04: Separate monitoring lifetime from window lifetime</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>needs-triage</dd>
+      <dt>Blocked by</dt>
+      <dd>None</dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Extract the existing application runtime while keeping the current WinForms host operational, so the later shell switch does not rewrite automation.</p>
+      <p>Source: <a href="../spec.html">approved design</a> · <a href="../../../docs/superpowers/plans/2026-11-08-avalonia-champion-editor.md">implementation plan</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Own one catalog, plan service, controller, monitors, transport and diagnostics independently of windows; preserve current paths, timing subscription and both closed native draft-write gates.</li>
+        <li>Retain discovery behavior and a two-second wait after each completed refresh cycle, without overlapping refresh work or blocking the UI on network/disk.</li>
+        <li>Expose current immutable/status evidence for rendering and explicit arm/start/stop operations. Opening or closing existing windows must not recreate application services.</li>
+        <li>Start disarmed. Explicit shutdown cancels held requests, drains monitors/refresh, attempts the latest plan save and disposes resources once even on repeated/concurrent requests.</li>
+        <li>Controlled runtime tests, the full existing suite and Release cross-build verify unchanged acceptance/settings/diagnostic behavior before the new shell replaces the old one.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Drafted from the approved design. Implementation-plan review is pending; needs-triage records that planning state. No implementation has started.</p>
+    </section>
+  </main>
+</body>
+</html>

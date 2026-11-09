@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>05: Switch Afkter to the unified Avalonia shell</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>05: Switch Afkter to the unified Avalonia shell</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>needs-triage</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="03-plan-drag-copy-and-focus.html">03</a>, <a href="04-ui-independent-runtime.html">04</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Connect the reviewed editor and shared runtime to one production Avalonia shell with Champions, Settings and tray quick controls.</p>
+      <p>Source: <a href="../spec.html">approved design</a> · <a href="../../../docs/superpowers/plans/2026-11-08-avalonia-champion-editor.md">implementation plan</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Start tray-resident and disarmed. Champions/Settings shortcuts activate the existing window at the requested destination. Close hides and preserves view/runtime state; explicit Exit drains and terminates.</li>
+        <li>Migrate Settings without changing ranges, policy meanings, live edits, reset, save recovery/retry, invalid input or countdown behavior. Advanced timing remains initially collapsed and no Apply/Save button appears.</li>
+        <li>Use the same runtime/plan service across destinations. Preserve existing stored priorities, policy, timing migration, diagnostics and AFKtor technical/storage identities. Do not silently enable draft writes.</li>
+        <li>Remove obsolete WinForms presentation only after replacements are connected. Keep .NET CLI builds, original local icon assets, and the real Linux preview without adding installer/updater or browser dependencies.</li>
+        <li>Integrated tests cover hide/reopen during a held read, shared unsaved plans and retry, repeated navigation, incomplete input and explicit shutdown. Run the full Release suite/build and real Linux editor flow.</li>
+        <li>Record occasional Windows tray, focus, drag/drop, DPI/Narrator and packaging checks as pending if unavailable. This work does not claim completion of original draft-companion ticket 07.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Drafted from the approved design. Implementation-plan review is pending; needs-triage records that planning state. No implementation has started.</p>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>03: Add drag, copy, insertion and accessible focus behavior</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 46rem; padding: 2rem 1rem; line-height: 1.6; }
+    h1, h2 { line-height: 1.2; }
+    dt { font-weight: bold; }
+    dd { margin: 0 0 0.75rem; }
+    section { margin-block: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>03: Add drag, copy, insertion and accessible focus behavior</h1>
+    <dl>
+      <dt>Status</dt>
+      <dd>needs-triage</dd>
+      <dt>Blocked by</dt>
+      <dd><a href="02-avalonia-workspace-and-preview.html">02</a></dd>
+    </dl>
+    <section>
+      <h2>Summary</h2>
+      <p>Make direct manipulation reliable and discoverable while preserving the same plan semantics as click and keyboard commands.</p>
+      <p>Source: <a href="../spec.html">approved design</a> · <a href="../../../docs/superpowers/plans/2026-11-08-avalonia-champion-editor.md">implementation plan</a>.</p>
+    </section>
+    <section>
+      <h2>Acceptance criteria</h2>
+      <ul>
+        <li>Drag from the catalog to insert, within a list to reorder, and between lists to copy without removing the source. Cross-pick/ban copies follow the same rule.</li>
+        <li>Use a movement threshold, clear insertion/target feedback, correct copy/move effects and overflow autoscroll. Cancelled/outside drops publish no revision.</li>
+        <li>Resolve current stable identities at drop. Stale source/anchor changes fail safely; destination duplicates preserve order and reveal the existing entry.</li>
+        <li>Selection, focus and visibility follow the affected entry. Search owns text-editing keys: Delete/arrows in search must never remove/reorder plans.</li>
+        <li>Real shared-control tests and native Linux interaction checks demonstrate pointer/keyboard paths, long-list insertion, Escape cancellation, duplicates and exactly one committed revision.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Comments</h2>
+      <!-- Append each dated comment here in chronological order. -->
+      <p><time datetime="2026-11-08">November 8, 2026</time>: Drafted from the approved design. Implementation-plan review is pending; needs-triage records that planning state. No implementation has started.</p>
+    </section>
+  </main>
+</body>
+</html>

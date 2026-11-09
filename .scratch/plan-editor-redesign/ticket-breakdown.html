@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Afkter editor — proposed implementation tasks</title><style>body{font:16px system-ui;max-width:58rem;margin:auto;padding:2rem;line-height:1.6}table{border-collapse:collapse;width:100%}td,th{border:1px solid #888;padding:.6rem;text-align:left;vertical-align:top}</style></head><body><main>
+<h1>Afkter editor: proposed implementation tasks</h1>
+<p>November 8, 2026. The <a href="spec.html">design is approved</a>; the <a href="../../docs/superpowers/plans/2026-11-08-avalonia-champion-editor.md">implementation plan</a> and these five draft tickets await review. No production implementation has started.</p>
+<table><thead><tr><th>Task</th><th>Blocked by</th><th>Planning status</th></tr></thead><tbody><tr><td><a href="issues/01-stable-plan-edits-and-offline-roles.html">01: Edit plans by champion identity and browse offline roles</a></td><td>None</td><td>needs-triage · plan review pending</td></tr>
+<tr><td><a href="issues/02-avalonia-workspace-and-preview.html">02: Browse and edit plans in the real Avalonia workspace</a></td><td>01</td><td>needs-triage · plan review pending</td></tr>
+<tr><td><a href="issues/03-plan-drag-copy-and-focus.html">03: Add drag, copy, insertion and accessible focus behavior</a></td><td>02</td><td>needs-triage · plan review pending</td></tr>
+<tr><td><a href="issues/04-ui-independent-runtime.html">04: Separate monitoring lifetime from window lifetime</a></td><td>None</td><td>needs-triage · plan review pending</td></tr>
+<tr><td><a href="issues/05-production-avalonia-shell.html">05: Switch Afkter to the unified Avalonia shell</a></td><td>03, 04</td><td>needs-triage · plan review pending</td></tr></tbody></table>
+<p>Frontier: 01 and 04 can run independently. Editor path: 01 → 02 → 03. Production shell: 03 + 04 → 05. Keep task batches within the player's authorization; dependencies do not authorize automatically starting further tasks.</p>
+<p>Each task delivers a reviewable increment. Task 04 preserves the current usable app while extracting its runtime; task 05 is the production switch. Existing automation and data contracts remain unchanged throughout. The prototype is a reference, not the production code to import.</p>
+</main></body></html>
