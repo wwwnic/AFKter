@@ -53,3 +53,10 @@ Changing it never clears manual control for the current draft.
 The browseable, searchable list of champions from which the player builds role
 plans. Its role filter narrows the displayed champions; it does not change the
 player’s assigned role or the saved plans.
+
+
+**Plan list**
+
+The ordered pick priorities or ban priorities for one role. A champion appears at
+most once in each list and may appear in other lists. Copying between lists keeps
+the source entry; reordering changes priority within one list.
