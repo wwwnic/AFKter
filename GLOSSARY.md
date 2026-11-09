@@ -46,3 +46,10 @@ The effective in-memory revision can be newer than the last saved revision.
 The player's live setting for automatic pick behavior near expiry after a manual
 hover change: Lock current hover (default), Use my role plan, or Do nothing.
 Changing it never clears manual control for the current draft.
+
+
+**Champion catalog**
+
+The browseable, searchable list of champions from which the player builds role
+plans. Its role filter narrows the displayed champions; it does not change the
+player’s assigned role or the saved plans.

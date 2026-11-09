@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Afkter champion-plan editor redesign — discussion</title><style>body{font:16px system-ui;max-width:56rem;margin:auto;padding:2rem;line-height:1.6}h1,h2{line-height:1.2}</style></head>
+<body><main>
+<h1>Afkter champion-plan editor redesign</h1>
+<p>Design discussion in progress · November 8, 2026. Avalonia is selected and a throwaway interaction prototype is authorized; this is not approval to replace the production UI.</p>
+<h2>Intent</h2>
+<p>The current editor works but requires too many indirect operations and is not practical or polished enough. Design a simple, understandable interface for players who are not technically experienced. Consider the interaction carefully before building; avoid repeated redesigns.</p>
+<h2>Confirmed direction</h2>
+<ul>
+<li>Show all five roles together, with ranked pick and ban lists and a searchable champion catalog.</li>
+<li>Support dragging champions into lists and reordering, with click and keyboard alternatives.</li>
+<li>A champion-page shortcut should open the app on the appropriate page. Do not assume the player requested a broader dashboard or navigation redesign.</li>
+<li>Keep champion names visible. Browsing helps recognition and inspiration when the player cannot recall a name; do not require a successful typed search to discover champions.</li>
+<li>Champion portraits are optional; the interface must remain useful without them.</li>
+<li>Include one optional catalog filter: All, Top, Jungle, Middle, Bottom, Support, alongside name search. Champions may appear in multiple roles. The player approved this filter while emphasizing a simple interface.</li>
+</ul>
+<h2>Existing contracts to preserve</h2>
+<p>Existing ordered role plans, live application and autosave remain the foundation. A completed reorder publishes one coherent edit; unfinished dragging does not publish partial state. Effective plans stay available through save failures. Presentation changes should preserve automation behavior and existing saved data.</p>
+<h2>Research</h2>
+<p>The current editor is programmatic WinForms. JoinGameAfk's richer champion-priority screen uses WPF with drag/drop and card templates. Visual Studio's designer is not required for either native approach. An embedded React UI could retain the .NET core and enable frontend previews on Linux, but adds WebView2 integration and a frontend build/bridge. Actual Windows host validation remains necessary for all approaches.</p>
+<p>Current core commands replace one list per operation. Cross-list moves would need an explicit atomic operation to avoid transient intermediate plans; complex reference gestures should not be imported implicitly.</p>
+<h2>Throwaway prototype findings</h2>
+<p>A separate Avalonia 12.1.5/.NET 10 interaction preview runs on the shared Linux desktop. It shows all five role rows, two ranked lanes per role, and a persistent named catalog. Actual UI checks exercised empty-search browsing, Top filtering, partial Tryndamere search, dragging a catalog item into priority 1, dragging within a plan to reorder, and keyboard reordering. The Release build has zero warnings/errors.</p>
+<p>This is a layout proposal, not an approved production design. Source and a portable source archive remain under <code>/workspace/shared/afkter-avalonia-prototype/</code> and <code>/workspace/shared/Afkter-Avalonia-Preview-Source.zip</code>. Sample plans are in memory only and role tags are illustrative. Cross-list moves, data sourcing, persistence integration and tray-host changes remain undecided. The prototype does not use the player’s plan files or League connection.</p>
+<h2>Open decisions</h2>
+<ul><li>Champion-role data source for the agreed filter.</li><li>Click-to-add, removal and cross-list drag semantics.</li><li>Portrait scope and any asset source.</li><li>Avalonia is selected after independent research. The player also values exploring this framework; React hosting was considered a good alternative. See the <a href="../../docs/research/2026-11-08-plan-editor-ui-options.md">independent framework research</a>. The framework is chosen; the final host migration approach and production implementation are not approved yet.</li><li>Screen layout and final approved design. Build a small throwaway Avalonia prototype with local sample data to evaluate browsing, filtering, adding and reordering; do not connect it to live automation or existing plan files.</li></ul>
+</main></body></html>
