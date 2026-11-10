@@ -33,7 +33,7 @@
         <li>Drag from the catalog to insert, within a list to reorder, and between lists to copy without removing the source. Cross-pick/ban copies follow the same rule.</li>
         <li>Use a movement threshold, clear insertion/target feedback, correct copy/move effects with visible Copy/Move feedback and overflow autoscroll. Destination outline, selected entry, keyboard focus and insertion marker are distinct. Cancelled/outside drops publish no revision.</li>
         <li>Resolve current stable identities at drop. Stale source/anchor changes fail safely; destination duplicates preserve order and reveal the existing entry.</li>
-        <li>Reveal/select the affected entry. Catalog additions/duplicates preserve browsing focus; plan reorders focus the moved entry, and removal focuses its neighbor or lane Add control. One stable Earlier/Later/Remove toolbar identifies the full role/list/champion/priority context. Search owns text-editing keys: Delete/arrows in search must never remove/reorder plans.</li>
+        <li>Reveal/select the affected entry. Catalog additions/duplicates preserve browsing focus; plan reorders focus the moved entry, and removal focuses its neighbor or lane Add control. One stable Earlier/Later/Remove toolbar identifies the full role/list/champion/priority context. Search owns text-editing keys: Delete/arrows in search must never remove/reorder plans. Plan-entry keyboard actions use the full focused role/list/champion identity, and toolbar actions use the full selected identity; changing insertion destination must not redirect either action. Use Task 01 atomic commands, not stale snapshot/index helpers.</li>
         <li>Real shared-control tests and native Linux interaction checks demonstrate pointer/keyboard paths, long-list insertion, Escape cancellation, duplicates and exactly one committed revision.</li>
       </ul>
     </section>
@@ -42,6 +42,7 @@
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-08">November 8, 2026</time>: Drafted from the approved design. Implementation-plan review is pending; needs-triage records that planning state. No implementation has started.</p>
       <p><time datetime="2026-11-08">November 8, 2026</time>: Incorporated player-authorized GPT-6-ASTRA layout refinements: clear browsing versus destination labels, readable single-line priorities, distinct interaction/focus feedback, and action outcomes separate from save status. No product workflow, dependency or implementation status changed.</p>
+      <p><time datetime="2026-11-09">November 9, 2026</time>: Applied the player-authorized ASTRA architecture corrections: complete plan-entry identity, explicit presentation refresh ownership, atomic edit routing, and shared shutdown completion with held-read/final-save concurrency coverage as applicable. No production implementation or dependency/status change.</p>
     </section>
   </main>
 </body>

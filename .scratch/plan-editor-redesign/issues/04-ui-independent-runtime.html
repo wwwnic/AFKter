@@ -33,7 +33,7 @@
         <li>Own one catalog, plan service, controller, monitors, transport and diagnostics independently of windows; preserve current paths, timing subscription and both closed native draft-write gates.</li>
         <li>Retain discovery behavior and a two-second wait after each completed refresh cycle, without overlapping refresh work or blocking the UI on network/disk.</li>
         <li>Expose current immutable/status evidence for rendering and explicit arm/start/stop operations. Opening or closing existing windows must not recreate application services.</li>
-        <li>Start disarmed. Explicit shutdown cancels held requests, drains monitors/refresh, attempts the latest plan save and disposes resources once even on repeated/concurrent requests.</li>
+        <li>Start disarmed. Explicit shutdown cancels held requests, drains monitors/refresh, attempts the latest plan save and disposes resources once. Every concurrent/subsequent Stop/Dispose caller awaits the same cached shutdown completion. A deterministic test holds both read completion and final save and proves no caller completes early. Start/Stop transitions share a gate; stopping cannot race a new background owner into existence.</li>
         <li>Controlled runtime tests, the full existing suite and Release cross-build verify unchanged acceptance/settings/diagnostic behavior before the new shell replaces the old one.</li>
       </ul>
     </section>
@@ -41,6 +41,7 @@
       <h2>Comments</h2>
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-08">November 8, 2026</time>: Drafted from the approved design. Implementation-plan review is pending; needs-triage records that planning state. No implementation has started.</p>
+      <p><time datetime="2026-11-09">November 9, 2026</time>: Applied the player-authorized ASTRA architecture corrections: complete plan-entry identity, explicit presentation refresh ownership, atomic edit routing, and shared shutdown completion with held-read/final-save concurrency coverage as applicable. No production implementation or dependency/status change.</p>
     </section>
   </main>
 </body>

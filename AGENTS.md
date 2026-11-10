@@ -2,7 +2,7 @@
 
 ## Project Structure
 
-Afkter is an initial Git repository. The first project contribution should add a root `README.md` that identifies the application entry point and the locations of source code, tests, and assets. Follow the chosen framework's directory conventions. Add a `.gitignore` for generated output, caches, and machine-specific settings when introducing tooling.
+Afkter is a .NET 10 Windows tray companion. Current projects are `src/AFKtor.Core` (controllers, plans, transport, persistence and diagnostic contracts), `src/AFKtor.Diagnostics` (bounded history/read API), and `src/AFKtor.Tray` (WinForms composition/UI/discovery). Tests are in `tests/AFKtor.Tests`; bundled champion metadata is under Core's `Assets`. See `README.md` for the active entry point and architecture map. Avalonia migration projects are specified in the approved design and implementation plan; do not describe them as implemented until they exist. Keep generated output, caches and machine-specific settings ignored.
 
 ## League Client Reference
 
@@ -10,7 +10,7 @@ For League Client (LCU) endpoints, payloads, events, and implementation examples
 
 ## Build, Test, and Run
 
-When adding the first runnable code, document the required toolchain and version, dependency setup, and exact commands to run locally, build, and test from the repository root. Run those commands from a fresh checkout before publishing them. Identify any required environment variables and use placeholders in checked-in examples.
+Keep the required toolchain/version, dependency setup, and exact local build/run/test commands current in README.md. Run those commands from a fresh checkout before publishing them. Identify any required environment variables and use placeholders in checked-in examples.
 
 ## Coding Style and Naming
 
@@ -18,7 +18,7 @@ When introducing a language, record its indentation and naming conventions along
 
 ## Testing
 
-When adding a test runner, document the framework, test directory, test file naming pattern, and how to run a single test and the full suite. If the project adopts a coverage threshold, record it with the test command. For behavior changes, report the checks you ran and include reproduction steps for any manual verification.
+The current NUnit suite uses `tests/AFKtor.Tests` with `*Tests.cs`; README.md documents focused and full-suite commands. Document equivalent commands for any new test project. If the project adopts a coverage threshold, record it with the test command. For behavior changes, report the checks you ran and include reproduction steps for any manual verification.
 
 ## Commits and Pull Requests
 

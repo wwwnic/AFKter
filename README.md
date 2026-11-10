@@ -24,10 +24,13 @@ so existing data stays available.
 
 - Entry point: `src/AFKtor.Tray/Program.cs`.
 - `src/AFKtor.Tray/`: WinForms tray UI and running League Client discovery.
-- `src/AFKtor.Core/`: UI-independent connection monitor and authenticated LCU probe.
+- `src/AFKtor.Core/`: UI-independent ready-check/draft controllers, LCU transport, role-plan editing, catalog data, persistence and diagnostic contracts/collector.
+- `src/AFKtor.Diagnostics/`: bounded persistent history and the authenticated read-only local diagnostic API.
 - `tests/AFKtor.Tests/`: NUnit tests, named `*Tests.cs`.
-- Assets: currently Windows built-in `SystemIcons`; no external asset files.
+- Assets: bundled champion identity metadata in `src/AFKtor.Core/Assets/`; the current tray uses Windows built-in `SystemIcons`.
 - `docs/`: API references and contributor guidance.
+
+Production composition currently lives in `TrayApplicationContext`; the active connection paths are `ReadyCheckSessionMonitor` and `DraftSessionMonitor`. The older `ConnectionMonitor`/`LcuConnectionProbe` path remains for compatibility/tests and is not the guide for new runtime wiring. The [Avalonia migration plan](docs/superpowers/plans/2026-11-08-avalonia-champion-editor.md) adds Runtime, Presentation and Preview projects; those projects are planned, not implemented yet.
 
 ## Setup and commands
 

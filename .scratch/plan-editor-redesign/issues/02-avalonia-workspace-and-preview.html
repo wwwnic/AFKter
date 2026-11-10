@@ -32,7 +32,7 @@
       <ul>
         <li>Show five labeled role rows with ranked picks/bans, visible names, a persistent alphabetic catalog, partial-name search and optional role filtering. Blank search supports discovery immediately. Use a compact heading, readable names without repeated initial badges, and single-line ranked lanes with counts and obvious overflow.</li>
         <li>Label the catalog filter “Browse by role” separately from “Add to: role · list” above the results, paired with the selected lane outline. Clearly highlight the selected destination without relying on color alone. Catalog clicks append there; duplicates reveal their existing entry. Earlier/Later/Remove and keyboard alternatives use the same domain operations.</li>
-        <li>Search/filter/destination and stable selection survive presentation refresh. Catalog role filters do not reset when the plan destination changes.</li>
+        <li>Search/filter/destination and stable selection survive presentation refresh. Selection identifies role, list and champion together, independently of insertion destination/catalog selection; same-champion occurrences cannot redirect Remove/Reorder when the destination changes. One window-owned refresh loop stops on hide and resumes without accumulating timers. Catalog role filters do not reset when the plan destination changes.</li>
         <li>Show truthful Saved/Saving/unsaved failure status with Retry. Effective plans remain visible through failure, and ordinary users are not shown technical revision numbers. Transient action/duplicate feedback never replaces persistent save status; duplicate feedback identifies the existing role/list/position.</li>
         <li>The Linux preview runs actual shared views against isolated sample/local data without League discovery or production profile access. No image download, browser runtime or paid UI component is required.</li>
         <li>View-model/headless tests and a native Linux preview check cover discovery, invalid role metadata, duplicate selection, resize/overflow, focused input and save recovery.</li>
@@ -43,6 +43,7 @@
       <!-- Append each dated comment here in chronological order. -->
       <p><time datetime="2026-11-08">November 8, 2026</time>: Drafted from the approved design. Implementation-plan review is pending; needs-triage records that planning state. No implementation has started.</p>
       <p><time datetime="2026-11-08">November 8, 2026</time>: Incorporated player-authorized GPT-6-ASTRA layout refinements: clear browsing versus destination labels, readable single-line priorities, distinct interaction/focus feedback, and action outcomes separate from save status. No product workflow, dependency or implementation status changed.</p>
+      <p><time datetime="2026-11-09">November 9, 2026</time>: Applied the player-authorized ASTRA architecture corrections: complete plan-entry identity, explicit presentation refresh ownership, atomic edit routing, and shared shutdown completion with held-read/final-save concurrency coverage as applicable. No production implementation or dependency/status change.</p>
     </section>
   </main>
 </body>
