@@ -14,6 +14,8 @@ and start it with Windows.
   and running League Client discovery.
 - `src/AFKtor.Core/`: UI-independent connection monitor and authenticated LCU probe.
 - `tests/AFKtor.Tests/`: NUnit tests, named `*Tests.cs`.
+- `tests/AFKtor.FakeLcu/`: a fake League client for end-to-end tests, and
+  `tools/AFKtor.FakeLcu.Cli/` to run it by hand ([Testing without League](docs/testing.md)).
 - Assets: tray icons are drawn at startup in `TrayIcons.cs`; no external asset files.
 - `docs/`: API references and contributor guidance.
 
@@ -54,7 +56,8 @@ dotnet build AFKtor.slnx -c Release --no-restore
 Compilation is the C# typecheck; warnings are errors. NUnit 4 with the NUnit3
 adapter runs deterministic tests without League. There is no coverage threshold.
 NuGet access is needed on the first restore. No application environment variables
-or manually configured credentials are required.
+or manually configured credentials are required. `AFKTOR_LCU_LOCKFILE` and
+`AFKTOR_DATA_DIR` exist only for testing against the fake client.
 
 In restricted agent environments, the .NET CLI may require a writable
 `DOTNET_CLI_HOME`, `NUGET_PACKAGES` pointing at an existing cache, and
@@ -181,6 +184,9 @@ without Windows targeting:
 dotnet test AFKtor.slnx
 dotnet build AFKtor.slnx -c Release
 ```
+
+Without League, a fake League client exercises the same flows end to end and can
+drive the real tray app. See [Testing without League](docs/testing.md).
 
 On Windows with the installed League Client:
 
