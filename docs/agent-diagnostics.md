@@ -3,12 +3,12 @@
 The Windows tray app automatically starts an authenticated, read-only Kestrel
 service at an assigned `http://127.0.0.1:<port>`. `AFKtor.Core` owns the immutable
 model and collector; `AFKtor.Diagnostics` owns HTTP and discovery. Linux tests
-start that same host without WinForms or League. There are no action, settings,
+start that same host without the tray UI or League. There are no action, settings,
 League proxy, remote listener, or CORS endpoints.
 
-Framework-dependent deployment now requires **both .NET 10 Desktop Runtime and
-ASP.NET Core 10 Runtime** on Windows. Installing only Desktop Runtime is not
-sufficient. A self-contained Windows publish bundles the required frameworks.
+Framework-dependent deployment requires **both the .NET 10 Runtime and
+ASP.NET Core 10 Runtime** on Windows. The Avalonia tray UI does not need the
+.NET 10 Desktop Runtime. A self-contained Windows publish bundles the required frameworks.
 No HTTP.sys URL reservation or administrator setup is needed. The Core project
 continues to reference only the base .NET runtime.
 
