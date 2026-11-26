@@ -5,7 +5,7 @@ namespace AFKtor.Tray;
 
 public sealed partial class SettingsWindow : Window
 {
-    private readonly Action<AcceptDelaySettings>? saveSettings;
+    private readonly Action<AcceptDelaySettings, bool>? saveSettings;
 
     // Required by the Avalonia XAML loader and previewer.
     public SettingsWindow()
@@ -17,10 +17,16 @@ public sealed partial class SettingsWindow : Window
         Save.Click += (_, _) => SaveAndClose();
     }
 
-    public SettingsWindow(AcceptDelaySettings settings, Action<AcceptDelaySettings> saveSettings) : this()
+    /// <param name="saveSettings">Saves the preferences and the start-with-Windows choice, or throws without changing either.</param>
+    public SettingsWindow(AcceptDelaySettings settings, bool startupSupported, bool startWithWindows,
+        Action<AcceptDelaySettings, bool> saveSettings) : this()
     {
         this.saveSettings = saveSettings;
         Delay.Value = settings.DelaySeconds;
+        ArmOnLaunch.IsChecked = settings.ArmOnLaunch;
+        StartWithWindows.IsChecked = startupSupported && startWithWindows;
+        StartWithWindows.IsEnabled = startupSupported;
+        StartWithWindowsUnavailable.IsVisible = !startupSupported;
     }
 
     private void SaveAndClose()
@@ -36,12 +42,13 @@ public sealed partial class SettingsWindow : Window
 
         try
         {
-            saveSettings(new AcceptDelaySettings(decimal.ToInt32(value)));
+            saveSettings(new AcceptDelaySettings(decimal.ToInt32(value)) { ArmOnLaunch = ArmOnLaunch.IsChecked == true },
+                StartWithWindows.IsEnabled && StartWithWindows.IsChecked == true);
             Close();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            ShowError("The delay could not be saved and has not changed. Check that your local application data folder is writable, then try again.");
+            ShowError("Your settings could not be saved and have not changed. Check that your local application data folder is writable, then try again.");
         }
     }
 

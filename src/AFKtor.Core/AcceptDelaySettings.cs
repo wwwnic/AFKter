@@ -1,6 +1,6 @@
 namespace AFKtor.Core;
 
-/// <summary>The only setting persisted between application launches.</summary>
+/// <summary>The preferences persisted between application launches. Arming itself is never saved.</summary>
 public sealed record AcceptDelaySettings
 {
     public const int MinimumSeconds = 0;
@@ -15,4 +15,7 @@ public sealed record AcceptDelaySettings
     }
 
     public int DelaySeconds { get; }
+
+    /// <summary>Opt-in: arm auto-accept as AFKtor starts instead of starting disarmed.</summary>
+    public bool ArmOnLaunch { get; init; }
 }
