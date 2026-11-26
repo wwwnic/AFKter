@@ -11,8 +11,7 @@ namespace AFKtor.Tray;
 /// <summary>Owns the tray icon, its menu and the Core services for the app's lifetime.</summary>
 internal sealed class TrayController : IDisposable
 {
-    private static readonly string dataDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor");
+    private static readonly string dataDirectory = TestOverrides.DataDirectory;
 
     private readonly IClassicDesktopStyleApplicationLifetime desktop;
     private readonly DiagnosticRuntime diagnostics = DiagnosticRuntime.Start(
@@ -51,15 +50,9 @@ internal sealed class TrayController : IDisposable
         // Opt-in only. The controller's usual rules still apply: a check already pending
         // when League first connects is skipped, so arming early never accepts a stale check.
         if (savedSettings.ArmOnLaunch) { controller.SetArmed(true); }
-        // LCU's self-signed certificate is trusted only by this loopback handler.
+        // LCU's self-signed certificate is trusted only for loopback.
         // HTTP and WebSocket requests share the no-redirect/no-proxy policy.
-        client = new HttpClient(new HttpClientHandler
-        {
-            UseProxy = false,
-            AllowAutoRedirect = false,
-            ServerCertificateCustomValidationCallback = (request, _, _, _) =>
-                request.RequestUri is { Scheme: "https", Host: "127.0.0.1" }
-        }) { Timeout = TimeSpan.FromSeconds(3) };
+        client = LcuHttp.CreateClient();
         monitor = new ReadyCheckSessionMonitor(async token =>
             LcuConnection.Parse(await LeagueClientDiscovery.ReadLockfileAsync(token)),
             connection => new LcuReadyCheckClient(connection, client), controller, diagnostics.Collector, match);
