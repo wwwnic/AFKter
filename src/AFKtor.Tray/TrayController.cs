@@ -23,13 +23,17 @@ internal sealed class TrayController : IDisposable
     private readonly ReadyCheckController controller;
     private readonly AcceptDelaySettingsStore settingsStore = new(Path.Combine(dataDirectory, "settings.json"));
     private readonly ReadyCheckSessionMonitor monitor;
+    private readonly MatchStatusTracker match = new();
     private readonly NativeMenuItem status = new("League: Disconnected") { IsEnabled = false };
+    private readonly NativeMenuItem matchStatus = new("Match: unknown") { IsEnabled = false, IsVisible = false };
     private readonly NativeMenuItem autoAcceptStatus = new("Auto-accept: Disarmed") { IsEnabled = false };
     private readonly NativeMenuItem arm = new("Arm auto-accept") { ToggleType = MenuItemToggleType.CheckBox };
     private readonly NativeMenuItem settings = new("Settings…");
     private readonly NativeMenuItem exit = new("Exit");
     private readonly WindowIcon disconnectedIcon = TrayIcons.Create(Color.FromRgb(0x80, 0x80, 0x80));
     private readonly WindowIcon connectedIcon = TrayIcons.Create(Color.FromRgb(0x1E, 0x88, 0xE5));
+    private readonly WindowIcon inMatchIcon = TrayIcons.Create(Color.FromRgb(0x43, 0xA0, 0x47));
+    private readonly WindowIcon attentionIcon = TrayIcons.Create(Color.FromRgb(0xF5, 0x9E, 0x0B));
     private readonly TrayIcon icon;
     private readonly DispatcherTimer discoveryTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer displayTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
@@ -53,7 +57,7 @@ internal sealed class TrayController : IDisposable
         }) { Timeout = TimeSpan.FromSeconds(3) };
         monitor = new ReadyCheckSessionMonitor(async token =>
             LcuConnection.Parse(await LeagueClientDiscovery.ReadLockfileAsync(token)),
-            connection => new LcuReadyCheckClient(connection, client), controller, diagnostics.Collector);
+            connection => new LcuReadyCheckClient(connection, client), controller, diagnostics.Collector, match);
 
         arm.Click += (_, _) =>
         {
@@ -74,6 +78,7 @@ internal sealed class TrayController : IDisposable
         };
         var menu = new NativeMenu();
         menu.Items.Add(status);
+        menu.Items.Add(matchStatus);
         menu.Items.Add(autoAcceptStatus);
         menu.Items.Add(arm);
         menu.Items.Add(settings);
@@ -144,8 +149,17 @@ internal sealed class TrayController : IDisposable
             ? $"Auto-accept: accepting in {time.TotalSeconds:0.0}s"
             : $"Auto-accept: {controller.Status}";
         arm.IsChecked = controller.IsArmed;
-        icon.ToolTipText = $"AFKtor — {status.Header} — {(controller.IsArmed ? "Armed" : "Disarmed")}";
-        icon.Icon = monitor.IsConnected ? connectedIcon : disconnectedIcon;
+        // The phase is only meaningful while connected; the tracker resets on disconnect.
+        var current = monitor.IsConnected ? match.Current : MatchStatus.Unknown;
+        var description = current.Describe();
+        matchStatus.IsVisible = description is not null;
+        if (description is not null) { matchStatus.Header = $"Match: {description}"; }
+        var tooltip = $"AFKtor — {status.Header} — {(controller.IsArmed ? "Armed" : "Disarmed")}";
+        icon.ToolTipText = description is null ? tooltip : $"{tooltip} — {description}";
+        icon.Icon = !monitor.IsConnected ? disconnectedIcon
+            : current.NeedsAttention ? attentionIcon
+            : current.IsInMatch ? inMatchIcon
+            : connectedIcon;
     }
 
     private async Task RefreshAsync()

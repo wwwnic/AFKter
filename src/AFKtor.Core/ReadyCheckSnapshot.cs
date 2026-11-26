@@ -45,4 +45,7 @@ public interface IReadyCheckClient
         return null;
     }
     Task RunAsync(Action<ReadyCheckUpdate> receive, CancellationToken cancellationToken);
+    // Gameflow phases are informational. Clients without them simply never report a phase.
+    Task RunAsync(Action<ReadyCheckUpdate> receive, Action<GameflowPhase> receivePhase, CancellationToken cancellationToken)
+        => RunAsync(receive, cancellationToken);
 }
