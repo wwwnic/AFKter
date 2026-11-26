@@ -14,4 +14,7 @@ AFKtor's opt-in action that accepts a ready check on the player's behalf.
 A single request to accept a ready check. Its successful completion does not by itself confirm that League accepted the match.
 
 **Armed**  
-The state in which the player has enabled auto-accept for the current AFKtor session. A League Client restart preserves this state, and a new AFKtor session starts disarmed.
+The state in which the player has enabled auto-accept for the current AFKtor session. A League Client restart preserves this state. A new AFKtor session starts disarmed unless the player chose to arm on launch.
+
+**Match status**  
+What League's gameflow phase says about the most recent ready check: whether it became a match, sent the player back to the queue, or removed them from it. AFKtor only reports it.
