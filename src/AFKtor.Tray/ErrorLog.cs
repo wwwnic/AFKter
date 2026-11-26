@@ -10,8 +10,7 @@ internal static class ErrorLog
     private const long MaximumBytes = 1_000_000;
     private static readonly object gate = new();
 
-    public static string Path { get; } = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AFKtor", "errors.log");
+    public static string Path { get; } = System.IO.Path.Combine(TestOverrides.DataDirectory, "errors.log");
 
     public static void Write(string context, Exception? error)
     {

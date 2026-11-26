@@ -10,5 +10,6 @@
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
     <ProjectReference Include="../../src/AFKtor.Core/AFKtor.Core.csproj" />
     <ProjectReference Include="../../src/AFKtor.Diagnostics/AFKtor.Diagnostics.csproj" />
+    <ProjectReference Include="../AFKtor.FakeLcu/AFKtor.FakeLcu.csproj" />
   </ItemGroup>
 </Project>

@@ -5,6 +5,10 @@
     <Project Path="src/AFKtor.Tray/AFKtor.Tray.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/AFKtor.FakeLcu/AFKtor.FakeLcu.csproj" />
     <Project Path="tests/AFKtor.Tests/AFKtor.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/AFKtor.FakeLcu.Cli/AFKtor.FakeLcu.Cli.csproj" />
   </Folder>
 </Solution>
