@@ -3,7 +3,9 @@
 AFKtor is a Windows tray companion for League of Legends. Ticket 01 implements
 connection status and automatic reconnection. Ticket 02 adds session-only arming
 and one delayed auto-accept attempt per eligible ready check. Ticket 03 adds
-persisted delay settings and countdown lifecycle handling.
+persisted delay settings and countdown lifecycle handling. Match status shows
+whether an accepted check became a match, and Settings can arm AFKtor on launch
+and start it with Windows.
 
 ## Layout
 
@@ -28,7 +30,7 @@ dotnet run --project src/AFKtor.Tray --no-build
 ```
 
 The app has no main window. Find AFKtor in the notification area (including the
-hidden-icons flyout), hover for connection status, or right-click for status and
+hidden-icons flyout), hover for connection and match status, or right-click for status and
 **Arm auto-accept**, the active countdown, **Settings…**, and **Exit**. Closing the terminal is not the normal tray shutdown path; use Exit.
 
 Only one AFKtor runs per Windows user session; starting it again while it is
@@ -61,7 +63,8 @@ Build/test host processes may require execution outside the sandbox.
 
 ## Auto-accept behavior
 
-AFKtor starts **disarmed**. Use **Arm auto-accept** in the tray menu to enable it
+AFKtor starts **disarmed** unless **Arm auto-accept when AFKtor starts** is
+checked in Settings. Use **Arm auto-accept** in the tray menu to enable it
 for this AFKtor session. A newly detected unanswered ready check starts a countdown
 using the configured delay (default **3 seconds**), shown in the tray menu. AFKtor then re-reads its state and
 sends one accept request only if it remains eligible. Duplicate events do not
@@ -71,7 +74,8 @@ check League and accept manually if necessary.
 Disarming, accepting/declining in League, the check ending, event-stream loss,
 or changed League credentials cancels pending work. Disarming and rearming does
 not revive the same check. Checks detected disarmed are skipped. Arming survives
-League restarts; restarting AFKtor resets arming. No arming state is saved.
+League restarts; restarting AFKtor resets arming to the arm-on-launch preference.
+Arming changes made from the tray menu are never saved.
 
 The LCU resource has no check ID. AFKtor tracks uninterrupted check lifecycles
 within one event-stream session and treats a backwards elapsed timer as uncertain.
@@ -99,12 +103,47 @@ unchanged; the next eligible check uses the new value. The countdown clears
 when canceled or ended, and when final verification starts, before sending the
 accept request.
 
-Only the delay is saved, at `%LOCALAPPDATA%\AFKtor\settings.json`. Missing,
-unreadable, malformed, or out-of-range settings fall back to 3 seconds. A failed
-save shows an error and keeps the previous effective delay; retry after checking
-folder write access. Saves write a temporary file before replacing the old file.
-Arming and League credentials are never saved. Restarting AFKtor always starts
-disarmed, even when a saved delay is restored.
+The delay and the arm-on-launch preference are saved at
+`%LOCALAPPDATA%\AFKtor\settings.json`. Each falls back on its own: a missing,
+malformed, or out-of-range delay becomes 3 seconds, and arm on launch is on only
+when the file holds an explicit JSON `true`. A failed save shows an error and
+keeps the previous effective settings; retry after checking folder write access.
+Saves write a temporary file before replacing the old file. The current arming
+state and League credentials are never saved.
+
+**Arm auto-accept when AFKtor starts** (off by default) arms AFKtor as it
+starts. The normal safety rules still apply: a ready check already pending when
+League first connects is skipped, so arming early never accepts a stale check.
+
+**Start AFKtor when I sign in to Windows** adds or removes an `AFKtor` value
+under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that starts the
+current `AFKtor.Tray.exe`. The checkbox reflects that value live, and saving
+while it is checked re-registers the current path (useful after moving the app).
+It is disabled when AFKtor runs through `dotnet AFKtor.Tray.dll` or off Windows,
+since there is no stable executable to register. If the settings file cannot be
+saved, the startup entry is put back as it was.
+
+## Match status
+
+AFKtor also subscribes to `OnJsonApiEvent_lol-gameflow_v1_gameflow-phase` and
+reads `/lol-gameflow/v1/gameflow-phase` once per connection. The tray menu and
+tooltip show the phase (In queue, Match found, In champ select, In game,
+Post-game) and how the last ready check ended:
+
+- **Match accepted — in champ select**: the check was followed by champ select, so
+  the match really started.
+- **Match didn't start — back in queue**: League returned to matchmaking, usually
+  because another player did not accept. AFKtor keeps working.
+- **Match missed — out of queue**: League returned to the lobby, so the check was
+  not accepted. Requeue in League.
+- **Champ select ended — back in queue / out of queue**: champ select ended
+  without a game, for example after a dodge.
+
+The tray icon is grey when disconnected, blue when connected, green in champ
+select or in game, and amber when you need to act in League (out of queue after a
+check, or a reconnect is needed). Phase data is informational only: unreadable or
+unknown phases are ignored, a failed phase read never ends the event session, and
+the status clears when League disconnects. It never changes what AFKtor accepts.
 
 ## Connection behavior
 
@@ -186,6 +225,20 @@ Ticket 03 settings checks:
    retry. Restore any backed-up settings afterward.
 8. Reopen Settings repeatedly and verify one window. Exit AFKtor while Settings
    is open, including during a countdown; verify the window and process close.
+
+Match status and startup checks:
+
+1. Arm, queue, and let AFKtor accept. Verify the menu shows **Match: Match found**,
+   then **Match accepted — in champ select**, and the icon turns green.
+2. Decline a check in League. Verify **Match missed — out of queue** and an amber icon.
+3. Dodge or leave champ select in a custom/practice flow. Verify **Champ select ended**.
+4. Exit League. Verify the match line disappears and the icon turns grey.
+5. Check **Arm auto-accept when AFKtor starts**, save, exit, and restart. Verify the
+   menu is armed. With a ready check already showing when League connects,
+   verify it is skipped.
+6. Check **Start AFKtor when I sign in to Windows** from a built `AFKtor.Tray.exe`,
+   save, and verify the `AFKtor` Run value. Sign out and in; verify AFKtor starts.
+   Uncheck, save, and verify the value is gone.
 
 Native Avalonia tray interactions on Windows and live League acceptance have
 **not** been run in this Linux environment. The deterministic settings/controller
