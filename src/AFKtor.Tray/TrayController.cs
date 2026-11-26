@@ -62,7 +62,16 @@ internal sealed class TrayController : IDisposable
             RenderStatus();
         };
         settings.Click += (_, _) => ShowSettings();
-        exit.Click += async (_, _) => await StopAsync();
+        exit.Click += async (_, _) =>
+        {
+            try { await StopAsync(); }
+            catch (Exception error)
+            {
+                // Exit must always exit, even if draining League work failed.
+                ErrorLog.Write("Exit drain failed", error);
+                desktop.Shutdown();
+            }
+        };
         var menu = new NativeMenu();
         menu.Items.Add(status);
         menu.Items.Add(autoAcceptStatus);
@@ -82,12 +91,24 @@ internal sealed class TrayController : IDisposable
         discoveryTimer.Tick += async (_, _) =>
         {
             discoveryTimer.Stop();
-            refresh = RefreshAsync();
-            await refresh;
-            if (!stopping.IsCancellationRequested) { discoveryTimer.Start(); }
+            try
+            {
+                refresh = RefreshAsync();
+                await refresh;
+            }
+            finally
+            {
+                // Polling must survive any single failed refresh, or League would stay
+                // "disconnected" for the rest of the session.
+                if (!stopping.IsCancellationRequested) { discoveryTimer.Start(); }
+            }
         };
         // State is sampled on the UI thread; network callbacks never touch controls.
-        displayTimer.Tick += (_, _) => RenderStatus();
+        displayTimer.Tick += (_, _) =>
+        {
+            try { RenderStatus(); }
+            catch (Exception error) { ErrorLog.Write("Tray status refresh failed", error); }
+        };
         discoveryTimer.Start();
         displayTimer.Start();
     }
@@ -97,6 +118,8 @@ internal sealed class TrayController : IDisposable
         if (stopping.IsCancellationRequested) { return; }
         if (settingsWindow is not null)
         {
+            // Activate alone does not bring back a minimized window.
+            if (settingsWindow.WindowState == WindowState.Minimized) { settingsWindow.WindowState = WindowState.Normal; }
             settingsWindow.Activate();
             return;
         }
@@ -129,6 +152,11 @@ internal sealed class TrayController : IDisposable
     {
         try { await monitor.RefreshAsync(stopping.Token); }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
+        catch (Exception error)
+        {
+            // Keep running: the next tick starts a fresh discovery and session.
+            ErrorLog.Write("League refresh failed", error);
+        }
     }
 
     private async Task StopAsync()

@@ -48,6 +48,40 @@ public sealed class ReadyCheckSessionMonitorTests
     }
 
     [Test]
+    public async Task UnexpectedSessionFailureStillAllowsReconnecting()
+    {
+        var clock = new ManualClock();
+        await using var controller = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        var first = new SessionClient(); var second = new SessionClient(); var created = 0;
+        await using var monitor = new ReadyCheckSessionMonitor(
+            _ => Task.FromResult(LcuConnection.Parse("LeagueClient:1:1001:one:https")),
+            _ => ++created == 1 ? first : second, controller);
+        await monitor.RefreshAsync(); await first.Started.Task;
+        first.Failure.SetException(new InvalidOperationException("unexpected"));
+        await monitor.SessionCompletion.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.That(monitor.SessionCompletion.IsFaulted, Is.False);
+        Assert.DoesNotThrowAsync(() => monitor.RefreshAsync());
+        await second.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.That(monitor.IsConnected, Is.True);
+    }
+
+    [Test]
+    public async Task UnexpectedDiscoveryFailureIsTreatedAsDisconnected()
+    {
+        await using var controller = new ReadyCheckController();
+        var attempts = 0;
+        await using var monitor = new ReadyCheckSessionMonitor(_ =>
+        {
+            attempts++;
+            throw new System.ComponentModel.Win32Exception("process enumeration failed");
+        }, _ => new SessionClient(), controller);
+        Assert.DoesNotThrowAsync(() => monitor.RefreshAsync());
+        Assert.DoesNotThrowAsync(() => monitor.RefreshAsync());
+        Assert.That(attempts, Is.EqualTo(2));
+        Assert.That(monitor.IsConnected, Is.False);
+    }
+
+    [Test]
     public async Task StopCancelsPendingAcceptAndAwaitsStreamShutdown()
     {
         var clock = new ManualClock();

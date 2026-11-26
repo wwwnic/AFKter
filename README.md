@@ -31,6 +31,13 @@ The app has no main window. Find AFKtor in the notification area (including the
 hidden-icons flyout), hover for connection status, or right-click for status and
 **Arm auto-accept**, the active countdown, **Settings…**, and **Exit**. Closing the terminal is not the normal tray shutdown path; use Exit.
 
+Only one AFKtor runs per Windows user session; starting it again while it is
+running exits immediately. Unexpected errors never stop League monitoring: a
+failed refresh or event session is retried on the next two-second tick, and a
+failed accept attempt only affects that check. Such errors are recorded (type,
+message and stack trace, never credentials) in `%LOCALAPPDATA%\AFKtor\errors.log`,
+which is capped at about 1 MB.
+
 ```powershell
 # Full test suite
 dotnet test AFKtor.slnx --no-restore

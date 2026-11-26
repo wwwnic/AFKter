@@ -176,6 +176,38 @@ public sealed class ReadyCheckControllerTests
         Assert.That(api.Accepts, Is.Zero);
     }
 
+    [Test]
+    public async Task UnexpectedAcceptFailureEndsOnlyThatAttempt()
+    {
+        var clock = new ManualClock();
+        var api = new FakeReadyCheckClient
+        {
+            Read = _ => Task.FromException<ReadyCheckSnapshot>(new InvalidOperationException("unexpected"))
+        };
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        var s = StartSession(c, api);
+        c.SetArmed(true); c.Update(s, Pending(0)); clock.Advance(3);
+        Assert.That(c.Status, Is.EqualTo("Auto-accept failed — accept manually"));
+        Assert.DoesNotThrowAsync(() => c.DisconnectAsync());
+    }
+
+    // LCU reports whole-second timers while Task.Delay wakes a little late.
+    [TestCase(3, 0, 0.015, 3)]
+    [TestCase(3, 2, 0.9, 5)]
+    [TestCase(0, 4, 0.016, 4)]
+    public async Task WholeSecondTimerIsAcceptedDespiteLateWakeUp(int delay, double initial, double late, double finalTimer)
+    {
+        var clock = new ManualClock();
+        var api = new FakeReadyCheckClient { Read = _ => Task.FromResult(new ReadyCheckSnapshot("InProgress", "None", finalTimer)) };
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        c.AcceptDelay = TimeSpan.FromSeconds(delay);
+        var s = StartSession(c, api);
+        c.SetArmed(true);
+        c.Update(s, Pending(initial));
+        clock.Advance(delay + late);
+        Assert.That(api.Accepts, Is.EqualTo(1));
+    }
+
     [TestCase(0)]
     [TestCase(1)]
     [TestCase(5)]
