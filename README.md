@@ -8,10 +8,11 @@ persisted delay settings and countdown lifecycle handling.
 ## Layout
 
 - Entry point: `src/AFKtor.Tray/Program.cs`.
-- `src/AFKtor.Tray/`: WinForms tray UI and running League Client discovery.
+- `src/AFKtor.Tray/`: Avalonia tray UI (`TrayController.cs`, `SettingsWindow.axaml`)
+  and running League Client discovery.
 - `src/AFKtor.Core/`: UI-independent connection monitor and authenticated LCU probe.
 - `tests/AFKtor.Tests/`: NUnit tests, named `*Tests.cs`.
-- Assets: currently Windows built-in `SystemIcons`; no external asset files.
+- Assets: tray icons are drawn at startup in `TrayIcons.cs`; no external asset files.
 - `docs/`: API references and contributor guidance.
 
 ## Setup and commands
@@ -127,11 +128,12 @@ Endpoint reference: [LCU schema](https://raw.githubusercontent.com/KebsCS/lcu-an
 The automated NUnit suite includes simulated events with a manually advanced
 clock, stale-response/cancellation tests, and an actual loopback TLS/WSS server
 that checks authentication, event subscription, GET, and the bodyless accept POST.
-This Linux environment cross-compiles the Windows target with:
+The Avalonia tray project targets plain `net10.0`, so Linux builds and tests it
+without Windows targeting:
 
 ```sh
-dotnet test AFKtor.slnx -p:EnableWindowsTargeting=true
-dotnet build AFKtor.slnx -c Release -p:EnableWindowsTargeting=true
+dotnet test AFKtor.slnx
+dotnet build AFKtor.slnx -c Release
 ```
 
 On Windows with the installed League Client:
@@ -178,9 +180,10 @@ Ticket 03 settings checks:
 8. Reopen Settings repeatedly and verify one window. Exit AFKtor while Settings
    is open, including during a countdown; verify the window and process close.
 
-Native WinForms interactions and live League acceptance have **not** been run in
-this Linux environment. The deterministic settings/controller tests and Windows
-cross-compilation do not replace these checks.
+Native Avalonia tray interactions on Windows and live League acceptance have
+**not** been run in this Linux environment. The deterministic settings/controller
+tests, a Linux startup run, and a headless Settings window check do not replace
+these checks.
 
 Routes and payloads are verified against the published schema and JoinGameAfk
 reference. The installed client's events and acceptance route still need live
@@ -202,5 +205,6 @@ indentation; no additional formatter or linter is required.
 
 The tray app starts a read-only, token-authenticated loopback service automatically.
 See [the V1 discovery and query contract](docs/agent-diagnostics.md) for agent examples,
-bounds, test coverage, and native checks. Framework-dependent Windows installs now
-require ASP.NET Core 10 Runtime alongside .NET 10 Desktop Runtime.
+bounds, test coverage, and native checks. Framework-dependent Windows installs
+require the .NET 10 Runtime and ASP.NET Core 10 Runtime. The Avalonia UI no
+longer needs the .NET 10 Desktop Runtime.

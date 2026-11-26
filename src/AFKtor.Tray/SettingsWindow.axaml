@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AFKtor.Tray.SettingsWindow"
+        Title="AFKtor settings"
+        Width="400"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="16" Spacing="12">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Label Content="Accept _delay (seconds):"
+                   Target="{Binding ElementName=Delay}"
+                   VerticalAlignment="Center" />
+            <NumericUpDown x:Name="Delay"
+                           Width="130"
+                           Increment="1"
+                           FormatString="0"
+                           ParsingNumberStyle="Integer"
+                           ClipValueToMinMax="True"
+                           AutomationProperties.Name="Accept delay in seconds" />
+        </StackPanel>
+        <TextBlock TextWrapping="Wrap"
+                   Text="Changes apply to the next ready check.&#10;0 seconds verifies and accepts immediately." />
+        <TextBlock x:Name="Error"
+                   IsVisible="False"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button x:Name="Save" Content="_Save" IsDefault="True" />
+            <Button x:Name="Cancel" Content="Cancel" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>
