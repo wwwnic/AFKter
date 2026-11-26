@@ -12,15 +12,18 @@ public sealed class AcceptDelaySettingsStore(string path)
         {
             using var document = JsonDocument.Parse(File.ReadAllText(settingsPath));
             var root = document.RootElement;
-            if (root.ValueKind == JsonValueKind.Object &&
-                root.TryGetProperty(nameof(AcceptDelaySettings.DelaySeconds), out var value) &&
-                value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int seconds))
-            {
-                return new AcceptDelaySettings(seconds);
-            }
+            if (root.ValueKind != JsonValueKind.Object) { return AcceptDelaySettings.Default; }
+            // Each preference falls back on its own, so a damaged delay never turns
+            // arm-on-launch on, and only an explicit JSON true enables it.
+            var seconds = root.TryGetProperty(nameof(AcceptDelaySettings.DelaySeconds), out var value) &&
+                value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int stored) &&
+                stored is >= AcceptDelaySettings.MinimumSeconds and <= AcceptDelaySettings.MaximumSeconds
+                    ? stored : AcceptDelaySettings.Default.DelaySeconds;
+            var armOnLaunch = root.TryGetProperty(nameof(AcceptDelaySettings.ArmOnLaunch), out var arm) &&
+                arm.ValueKind == JsonValueKind.True;
+            return new AcceptDelaySettings(seconds) { ArmOnLaunch = armOnLaunch };
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            JsonException or ArgumentOutOfRangeException)
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
         {
             // A missing or damaged preference must not stop the tray from starting.
         }

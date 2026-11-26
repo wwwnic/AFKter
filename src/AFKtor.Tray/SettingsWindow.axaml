@@ -21,6 +21,24 @@
         </StackPanel>
         <TextBlock TextWrapping="Wrap"
                    Text="Changes apply to the next ready check.&#10;0 seconds verifies and accepts immediately." />
+        <StackPanel Spacing="4">
+            <CheckBox x:Name="ArmOnLaunch"
+                      Content="_Arm auto-accept when AFKtor starts" />
+            <TextBlock TextWrapping="Wrap"
+                       Margin="28,0,0,0"
+                       Opacity="0.7"
+                       Text="Off by default. A ready check already showing when League connects is still left for you." />
+        </StackPanel>
+        <StackPanel Spacing="4">
+            <CheckBox x:Name="StartWithWindows"
+                      Content="Start AFKtor when I sign in to _Windows" />
+            <TextBlock x:Name="StartWithWindowsUnavailable"
+                       IsVisible="False"
+                       TextWrapping="Wrap"
+                       Margin="28,0,0,0"
+                       Opacity="0.7"
+                       Text="Available when AFKtor runs from its own AFKtor.Tray.exe on Windows." />
+        </StackPanel>
         <TextBlock x:Name="Error"
                    IsVisible="False"
                    TextWrapping="Wrap"

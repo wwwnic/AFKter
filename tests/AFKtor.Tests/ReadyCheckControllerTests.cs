@@ -343,6 +343,23 @@ public sealed class ReadyCheckControllerTests
         Assert.That(c.AcceptDelay.TotalSeconds, Is.EqualTo(3));
     }
 
+    [Test]
+    public async Task ArmingBeforeLeagueConnectsStillSkipsACheckAlreadyPending()
+    {
+        // Arm on launch arms the controller before any League session exists.
+        var clock = new ManualClock(); var api = new FakeReadyCheckClient();
+        await using var c = new ReadyCheckController(clock.DelayAsync, () => clock.Now);
+        c.SetArmed(true);
+        var s = c.BeginSession(api);
+        c.Update(s, new(Pending(4).Snapshot, IsInitial: true));
+        clock.Advance(10);
+        Assert.That(api.Accepts, Is.Zero);
+        c.Update(s, new(ReadyCheckSnapshot.Inactive));
+        c.Update(s, Pending(0));
+        clock.Advance(3);
+        Assert.That(api.Accepts, Is.EqualTo(1));
+    }
+
     private static long StartSession(ReadyCheckController controller, IReadyCheckClient api)
     {
         var session = controller.BeginSession(api);

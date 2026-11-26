@@ -38,6 +38,7 @@ internal sealed class TrayController : IDisposable
     private readonly DispatcherTimer discoveryTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer displayTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private SettingsWindow? settingsWindow;
+    private AcceptDelaySettings savedSettings;
     private Task refresh = Task.CompletedTask;
     private bool disposed;
 
@@ -45,7 +46,11 @@ internal sealed class TrayController : IDisposable
     {
         this.desktop = desktop;
         controller = new ReadyCheckController(diagnostics: diagnostics.Collector);
-        controller.AcceptDelay = TimeSpan.FromSeconds(settingsStore.Load().DelaySeconds);
+        savedSettings = settingsStore.Load();
+        controller.AcceptDelay = TimeSpan.FromSeconds(savedSettings.DelaySeconds);
+        // Opt-in only. The controller's usual rules still apply: a check already pending
+        // when League first connects is skipped, so arming early never accepts a stale check.
+        if (savedSettings.ArmOnLaunch) { controller.SetArmed(true); }
         // LCU's self-signed certificate is trusted only by this loopback handler.
         // HTTP and WebSocket requests share the no-redirect/no-proxy policy.
         client = new HttpClient(new HttpClientHandler
@@ -129,10 +134,25 @@ internal sealed class TrayController : IDisposable
             return;
         }
 
-        settingsWindow = new SettingsWindow(new AcceptDelaySettings((int)controller.AcceptDelay.TotalSeconds), value =>
+        var startupSupported = StartupRegistration.IsSupported;
+        var startupEnabled = startupSupported && StartupRegistration.IsEnabled;
+        settingsWindow = new SettingsWindow(savedSettings, startupSupported, startupEnabled, (value, startWithWindows) =>
         {
-            // A failed save leaves the controller's effective setting unchanged.
-            settingsStore.Save(value);
+            // Change Windows startup first because it can be put back; then the file.
+            // A failed save leaves both and the controller's effective delay unchanged.
+            var changeStartup = startupSupported && (startWithWindows || startupEnabled);
+            if (changeStartup) { StartupRegistration.SetEnabled(startWithWindows); }
+            try { settingsStore.Save(value); }
+            catch
+            {
+                if (changeStartup)
+                {
+                    try { StartupRegistration.SetEnabled(startupEnabled); }
+                    catch (IOException error) { ErrorLog.Write("Restoring start with Windows failed", error); }
+                }
+                throw;
+            }
+            savedSettings = value;
             controller.AcceptDelay = TimeSpan.FromSeconds(value.DelaySeconds);
         });
         settingsWindow.Closed += (_, _) => settingsWindow = null;

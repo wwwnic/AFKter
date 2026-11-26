@@ -85,4 +85,30 @@ public sealed class AcceptDelaySettingsTests
         Assert.That(new AcceptDelaySettingsStore(SettingsPath).Load().DelaySeconds, Is.EqualTo(1));
         Assert.That(Directory.GetFiles(directory), Has.Length.EqualTo(1));
     }
+
+    [Test]
+    public void ArmOnLaunchIsOffByDefaultAndSurvivesANewStoreInstance()
+    {
+        Assert.That(new AcceptDelaySettingsStore(SettingsPath).Load().ArmOnLaunch, Is.False);
+        new AcceptDelaySettingsStore(SettingsPath).Save(new AcceptDelaySettings(7) { ArmOnLaunch = true });
+        var loaded = new AcceptDelaySettingsStore(SettingsPath).Load();
+        Assert.That(loaded.DelaySeconds, Is.EqualTo(7));
+        Assert.That(loaded.ArmOnLaunch, Is.True);
+    }
+
+    [TestCase("{\"DelaySeconds\":5}", 5, false)]
+    [TestCase("{\"DelaySeconds\":5,\"ArmOnLaunch\":false}", 5, false)]
+    [TestCase("{\"DelaySeconds\":5,\"ArmOnLaunch\":\"true\"}", 5, false)]
+    [TestCase("{\"DelaySeconds\":5,\"ArmOnLaunch\":1}", 5, false)]
+    [TestCase("{\"DelaySeconds\":99,\"ArmOnLaunch\":true}", 3, true)]
+    [TestCase("{\"ArmOnLaunch\":true}", 3, true)]
+    [TestCase("[true]", 3, false)]
+    public void EachPreferenceFallsBackOnItsOwn(string contents, int delay, bool armOnLaunch)
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(SettingsPath, contents);
+        var loaded = new AcceptDelaySettingsStore(SettingsPath).Load();
+        Assert.That(loaded.DelaySeconds, Is.EqualTo(delay));
+        Assert.That(loaded.ArmOnLaunch, Is.EqualTo(armOnLaunch));
+    }
 }
