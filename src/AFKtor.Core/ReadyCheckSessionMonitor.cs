@@ -7,7 +7,8 @@ public sealed class ReadyCheckSessionMonitor(
     Func<CancellationToken, Task<LcuConnection?>> discover,
     Func<LcuConnection, IReadyCheckClient> createClient,
     ReadyCheckController controller,
-    DiagnosticCollector? diagnostics = null) : IAsyncDisposable
+    DiagnosticCollector? diagnostics = null,
+    MatchStatusTracker? match = null) : IAsyncDisposable
 {
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly CancellationTokenSource stopping = new();
@@ -63,7 +64,7 @@ public sealed class ReadyCheckSessionMonitor(
     {
         try
         {
-            await session.Client.RunAsync(update =>
+            void OnUpdate(ReadyCheckUpdate update)
             {
                 if (!session.Cancellation.IsCancellationRequested && ReferenceEquals(active, session))
                 {
@@ -71,7 +72,17 @@ public sealed class ReadyCheckSessionMonitor(
                     connected = true;
                     diagnostics?.ConnectionChanged(ConnectionStage.Connected, session.Generation, DiagnosticReason.None);
                 }
-            }, session.Cancellation.Token).ConfigureAwait(false);
+            }
+            void OnPhase(GameflowPhase phase)
+            {
+                if (!session.Cancellation.IsCancellationRequested && ReferenceEquals(active, session))
+                {
+                    match!.Update(phase);
+                }
+            }
+            await (match is null
+                ? session.Client.RunAsync(OnUpdate, session.Cancellation.Token)
+                : session.Client.RunAsync(OnUpdate, OnPhase, session.Cancellation.Token)).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -84,6 +95,8 @@ public sealed class ReadyCheckSessionMonitor(
             if (ReferenceEquals(active, session))
             {
                 connected = false;
+                // No callbacks remain once RunAsync has returned, so nothing can refill it.
+                match?.Reset();
                 diagnostics?.ConnectionChanged(ConnectionStage.Disconnected, session.Generation,
                     session.Cancellation.IsCancellationRequested ? DiagnosticReason.Stopped : DiagnosticReason.SessionFailure);
                 await controller.DisconnectAsync().ConfigureAwait(false);
