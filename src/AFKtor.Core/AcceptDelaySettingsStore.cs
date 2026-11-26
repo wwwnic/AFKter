@@ -36,7 +36,12 @@ public sealed class AcceptDelaySettingsStore(string path)
         var temporaryPath = Path.Combine(directory, $".settings-{Guid.NewGuid():N}.tmp");
         try
         {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings));
+            using (var file = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                JsonSerializer.Serialize(file, settings);
+                // Reach the disk before the rename so a power loss cannot leave an empty file.
+                file.Flush(flushToDisk: true);
+            }
             // Same-directory replacement keeps the previous setting intact until
             // the new file is fully written. Never truncate the destination first.
             File.Move(temporaryPath, settingsPath, overwrite: true);

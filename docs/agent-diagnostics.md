@@ -373,7 +373,7 @@ the request cannot be recalled. Success is `completedUnconfirmed`, which means
 only HTTP completion, never confirmation that League accepted the match.
 Post-dispatch failures/timeouts remain `unknown` and never cause an automatic
 retry; pre-dispatch failures are `failed`. `failure` is an allowlisted category
-(`http`, `io`, `invalidData`, `timeout`, `cancelled`). `httpStatus` is present only
+(`http`, `io`, `invalidData`, `timeout`, `cancelled`, `unexpected`). `httpStatus` is present only
 for known HTTP statuses; simulated clients can leave it unavailable. Latency is
 in milliseconds from dispatch, using the source monotonic clock. No response
 body, credentials, unchecked exception text, or token enters this evidence.

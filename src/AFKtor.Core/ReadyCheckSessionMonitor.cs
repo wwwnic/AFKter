@@ -1,4 +1,3 @@
-using System.Net.WebSockets;
 using AFKtor.Core.Diagnostics;
 
 namespace AFKtor.Core;
@@ -32,8 +31,10 @@ public sealed class ReadyCheckSessionMonitor(
                 // synchronous disposal cannot wait on a queued UI continuation.
                 connection = await Task.Run(() => discover(refresh.Token), refresh.Token).ConfigureAwait(false);
             }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            catch (Exception error) when (error is not OperationCanceledException)
             {
+                // Process inspection can fail in many ways while League starts or exits.
+                // Treat every discovery failure as "not found" and retry on the next tick.
                 connection = null;
                 discoveryReason = DiagnosticReason.DiscoveryFailed;
             }
@@ -72,10 +73,11 @@ public sealed class ReadyCheckSessionMonitor(
                 }
             }, session.Cancellation.Token).ConfigureAwait(false);
         }
-        catch (Exception error) when (error is OperationCanceledException or HttpRequestException or IOException or InvalidDataException or WebSocketException)
+        catch (Exception)
         {
-            // Credentials and raw response bodies never reach UI/logs. The next
-            // discovery tick retries with a completely new, unambiguous lifetime.
+            // Any session failure, expected or not, only ends this session. Credentials and
+            // raw response bodies never reach UI/logs. The next discovery tick retries with a
+            // completely new, unambiguous lifetime, so one bad event cannot stop monitoring.
         }
         finally
         {

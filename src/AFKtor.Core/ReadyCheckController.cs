@@ -183,8 +183,11 @@ public sealed class ReadyCheckController(
                 operation.Stage = AcceptOperationStage.Verifying;
                 operationState = Describe(operation);
                 status = "Verifying ready check";
-                minimumElapsed = operation.InitialElapsedSeconds +
-                    operation.Delay.TotalSeconds + Math.Max(0, (clockNow() - operation.Deadline).TotalSeconds);
+                // LCU reports the ready-check timer in whole seconds, and Task.Delay always
+                // wakes slightly late. Requiring the exact sub-second overshoot would reject
+                // almost every real check, so only whole elapsed seconds are required.
+                minimumElapsed = Math.Floor(operation.InitialElapsedSeconds + operation.Delay.TotalSeconds +
+                    Math.Max(0, (clockNow() - operation.Deadline).TotalSeconds) + 1e-9);
                 Emit(ControllerDecision.Verifying, operation);
             }
             var snapshot = await operation.Client.ReadAsync(token).ConfigureAwait(false);
@@ -237,6 +240,16 @@ public sealed class ReadyCheckController(
                     InvalidDataException => AcceptFailureCategory.InvalidData,
                     _ => AcceptFailureCategory.Timeout
                 }, error is HttpRequestException http ? (int?)http.StatusCode : null);
+                if (IsCurrent(operation)) { status = "Auto-accept failed — accept manually"; }
+            }
+        }
+        catch (Exception)
+        {
+            // Any other failure ends only this attempt. A faulted work task would otherwise
+            // surface through DisconnectAsync and break reconnection for the rest of the run.
+            lock (gate)
+            {
+                RecordFailure(operation, AcceptFailureCategory.Unexpected);
                 if (IsCurrent(operation)) { status = "Auto-accept failed — accept manually"; }
             }
         }

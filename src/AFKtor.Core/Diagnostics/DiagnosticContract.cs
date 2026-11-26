@@ -82,7 +82,7 @@ public enum AcceptCancellationReason { None, Disarmed, SessionReplaced, CheckEnd
 [Flags]
 public enum EligibilityFailure { None = 0, NotPending = 1, TimerBackwards = 2, InsufficientTimer = 4, StaleOperation = 8 }
 public enum AcceptRequestOutcome { None, CompletedUnconfirmed, Failed, Unknown }
-public enum AcceptFailureCategory { None, Http, Io, InvalidData, Timeout, Cancelled }
+public enum AcceptFailureCategory { None, Http, Io, InvalidData, Timeout, Cancelled, Unexpected }
 public sealed record ReadyCheckDiagnosticState(string Availability = "unavailable", long Generation = 0,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? CheckId = null, bool Baseline = false, ReadyCheckValue State = ReadyCheckValue.Unknown,
     PlayerResponseValue Response = PlayerResponseValue.Unknown, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] double? Timer = null,
